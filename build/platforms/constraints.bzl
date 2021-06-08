@@ -12,27 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Build and test
+"""Common sets of constraint values."""
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, edited]
-  workflow_dispatch:
-
-jobs:
-  build-test:
-    name: Build and test
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Check out revision
-        uses: actions/checkout@v2
-
-      - name: Bazel build and test
-        uses: world-federation-of-advertisers/actions/bazel-build-test@v1
-        with:
-          workspace-path: .
-          build-options: |
-            --host_platform=//build/platforms:ubuntu_18_04
+DISTROLESS_JAVA = [
+    "@platforms//os:linux",
+    "@platforms//cpu:x86_64",
+] + select({
+    "//build/platforms:glibc_2_23": [],
+    "//build/platforms:glibc_2_27": [],
+    "//build/platforms:glibc_2_28": [],
+    "//conditions:default": ["@platforms//:incompatible"],
+})
