@@ -120,7 +120,6 @@ MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.3.6"))
 # or default dependency versions).
 MAVEN_ARTIFACTS.update({
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
-    "com.google.cloud:google-cloud-nio": "0.122.0",
     "com.google.code.gson:gson": "2.8.6",
     "com.google.guava:guava": "30.0-jre",
     "com.nhaarman.mockitokotlin2:mockito-kotlin": "2.2.0",
