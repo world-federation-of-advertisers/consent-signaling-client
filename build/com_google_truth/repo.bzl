@@ -1,4 +1,4 @@
-# Copyright 2021 The Cross-Media Measurement Authors
+# Copyright 2020 The Cross-Media Measurement Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,26 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Build and test
+"""Repository defs for Truth library."""
 
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, edited]
-  workflow_dispatch:
+_ARTIFACT_NAMES = [
+    "com.google.truth.extensions:truth-java8-extension",
+    "com.google.truth.extensions:truth-proto-extension",
+    "com.google.truth:truth",
+]
 
-jobs:
-  build-test:
-    name: Build and test
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Check out revision
-        uses: actions/checkout@v2
-
-      - name: Bazel build and test
-        uses: world-federation-of-advertisers/actions/bazel-build-test@v1
-        with:
-          workspace-path: .
-          
+def com_google_truth_artifact_dict(version):
+    return {name: version for name in _ARTIFACT_NAMES}
