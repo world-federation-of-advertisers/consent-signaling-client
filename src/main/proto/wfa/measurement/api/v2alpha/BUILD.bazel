@@ -3,8 +3,35 @@ load("@rules_java//java:defs.bzl", "java_proto_library")
 package(default_visibility = ["//visibility:public"])
 
 java_proto_library(
-    name = "measurement_java_proto",
+    name = "certificate_java_proto",
     deps = [
-        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto",
+        "@wfa_measurement_api_proto//src/main/proto/wfa/measurement/api/v2alpha:certificate_proto",
     ],
 )
+
+java_proto_library(
+    name = "measurement_java_proto",
+    deps = [
+        "@wfa_measurement_api_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto",
+    ],
+)
+
+java_proto_library(
+    name = "crypto_java_proto",
+    deps = [
+        "@wfa_measurement_api_proto//src/main/proto/wfa/measurement/api/v2alpha:crypto_proto",
+    ],
+)
+
+java_proto_library(
+    name = "measurement_spec_java_proto",
+    deps = [
+        "@wfa_measurement_api_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_proto",
+    ],
+)
+
+
+
+
+
+
