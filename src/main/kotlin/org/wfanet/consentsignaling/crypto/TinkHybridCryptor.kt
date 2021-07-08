@@ -3,15 +3,14 @@ package org.wfanet.consentsignaling.crypto
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 /**
- * NoCrypto is an implementation of Crypto that actually does no crypto.  This should only be used
- * for bringup, unit testing, or debugging.  Do not use in Production.
+ * TODO TinkHybridCryptor will be an implementation of Crypto that uses Google Tink as its crypto engine
  */
-class NoCrypto : Crypto {
+class TinkHybridCryptor : HybridCryptor {
   override fun encrypt(publicKey: EncryptionPublicKey, data: ByteArray): ByteArray {
-    return data
+    TODO("Not yet implemented")
   }
 
   override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteArray): ByteArray {
-    return encryptedData
+    TODO("Not yet implemented")
   }
 }

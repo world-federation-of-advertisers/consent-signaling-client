@@ -1,7 +1,7 @@
 package org.wfanet.consentsignaling.client.duchy
 
 import com.google.protobuf.ByteString
-import org.wfanet.consentsignaling.client.crypto
+import org.wfanet.consentsignaling.client.hybridCryptor
 import org.wfanet.consentsignaling.client.signage
 import org.wfanet.consentsignaling.common.generateDataProviderListHash
 import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
@@ -26,19 +26,20 @@ fun verifyEdpParticipationSignature(
   // Get the Signature...
   val signature = requisition.dataProviderParticipationSignature
   // Generate the Data Provider List Hash
-  val dataProviderListHash: ByteArray = generateDataProviderListHash(
-    computation.dataProviderList.toByteArray(),
-    computation.dataProviderListSalt.toByteArray()
+  val dataProviderListHash: ByteString = generateDataProviderListHash(
+    computation.dataProviderList,
+    computation.dataProviderListSalt
   )
   // Calculate the Requisition Fingerprint
-  val requisitionFingerprint =
+  val requisitionFingerprint = ByteString.copyFrom(
     requisition.requisitionSpecHash.toByteArray()
-      .plus(dataProviderListHash)
+      .plus(dataProviderListHash.toByteArray())
       .plus(computation.measurementSpec.toByteArray())
+  )
 
   // TODO Verify the EdpParticipantSignature has not been previously reused to protect against replay attacks
 
-  return signage.verify(dataProviderCertificate, signature.toByteArray(), requisitionFingerprint)
+  return signage.verify(dataProviderCertificate, signature, requisitionFingerprint)
 }
 
 /**
@@ -52,7 +53,7 @@ fun signAndEncryptResult(
   measurementPublicKey: EncryptionPublicKey
 ): ByteArray {
   // Sign the result with the private key
-  val signature = signage.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteArray())
+  val signature = signage.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteString())
 
   // Create the SignedData
   val signedData = SignedData.newBuilder().also {
@@ -60,5 +61,5 @@ fun signAndEncryptResult(
     it.signature = ByteString.copyFrom(signature)
   }.build()
   // Encrypt the SignedData
-  return crypto.encrypt(measurementPublicKey, signedData.toByteArray())
+  return hybridCryptor.encrypt(measurementPublicKey, signedData.toByteArray())
 }

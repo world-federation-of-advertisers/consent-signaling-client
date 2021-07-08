@@ -3,9 +3,9 @@ package org.wfanet.consentsignaling.client.duchy
 import com.google.protobuf.ByteString
 import kotlin.test.assertTrue
 import org.junit.Test
-import org.wfanet.consentsignaling.client.crypto
+import org.wfanet.consentsignaling.client.hybridCryptor
 import org.wfanet.consentsignaling.client.signage
-import org.wfanet.consentsignaling.crypto.NoCrypto
+import org.wfanet.consentsignaling.crypto.NoHybridCryptor
 import org.wfanet.consentsignaling.crypto.keystore.InMemoryKeyStore
 import org.wfanet.consentsignaling.crypto.signage.NoSignage
 import org.wfanet.measurement.api.v2alpha.Certificate
@@ -25,7 +25,7 @@ class DuchyClientTest {
   @Test
   fun `duchy verify edp participation signature`() {
     signage = NoSignage()
-    crypto = NoCrypto()
+    hybridCryptor = NoHybridCryptor()
 
     /**
      * Items already known to the duchy
@@ -54,14 +54,14 @@ class DuchyClientTest {
   @Test
   fun `duchy sign and encrypt result`() {
     signage = NoSignage()
-    crypto = NoCrypto()
+    hybridCryptor = NoHybridCryptor()
 
     /**
      * Items already setup in the aggregator duchy
      */
     // Duchy Private Key Storage
     val duchyPrivateKeyID = "duchyPrivateKeyID"
-    val privateKeyBytes = "TODO".toByteArray()
+    val privateKeyBytes = ByteString.copyFrom("TODO".toByteArray())
     val keystore = InMemoryKeyStore()
     keystore.storePrivateKeyDER(duchyPrivateKeyID, privateKeyBytes)
     // Duchy/Aggregator Certificate
@@ -69,7 +69,7 @@ class DuchyClientTest {
       it.x509Der // TODO
     }.build()
     val measurementConsumerPublicKey = EncryptionPublicKey.newBuilder().also {
-      it.type //TODO
+      it.type // TODO
       it.publicKeyInfo // TODO
     }.build()
 

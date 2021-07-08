@@ -1,5 +1,6 @@
 package org.wfanet.consentsignaling.crypto.keystore
 
+import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
 
 /**
@@ -8,9 +9,9 @@ import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
  * This is for bringup and unit testing only. This is not secure and should not be used in production.
  */
 class InMemoryKeyStore : KeyStore() {
-  private val keyStoreMap = HashMap<String, ByteArray>()
+  private val keyStoreMap = HashMap<String, ByteString>()
 
-  override fun storePrivateKeyDER(id: String, privateKeyBytes: ByteArray): PrivateKeyHandle {
+  override fun storePrivateKeyDER(id: String, privateKeyBytes: ByteString): PrivateKeyHandle {
     keyStoreMap[id] = privateKeyBytes
     return PrivateKeyHandle(id, this)
   }
@@ -22,7 +23,7 @@ class InMemoryKeyStore : KeyStore() {
     throw KeyNotFoundException(id)
   }
 
-  override fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteArray {
+  override fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString {
     keyStoreMap[privateKeyHandle.id]?.let {
       return it
     }

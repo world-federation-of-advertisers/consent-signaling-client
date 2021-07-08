@@ -1,5 +1,6 @@
 package org.wfanet.consentsignaling.crypto.signage
 
+import com.google.protobuf.ByteString
 import java.io.ByteArrayInputStream
 import java.security.KeyFactory
 import java.security.Signature
@@ -22,11 +23,11 @@ class JavaSecuritySignage : Signage {
   override fun sign(
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
-    data: ByteArray
+    data: ByteString
   ): ByteArray {
     val x509Certificate = decodeCertificate(certificate)
     val javaPrivateKey = KeyFactory.getInstance("RSA")
-      .generatePrivate(PKCS8EncodedKeySpec(privateKeyHandle.toByteArray()))
+      .generatePrivate(PKCS8EncodedKeySpec(privateKeyHandle.toByteString().toByteArray()))
     val signature = Signature.getInstance(x509Certificate.sigAlgName)
     signature.setParameter(
       PSSParameterSpec(
@@ -38,11 +39,11 @@ class JavaSecuritySignage : Signage {
       )
     )
     signature.initSign(javaPrivateKey)
-    signature.update(data)
+    signature.update(data.toByteArray())
     return signature.sign()
   }
 
-  override fun verify(certificate: Certificate, signature: ByteArray, data: ByteArray): Boolean {
+  override fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean {
     val x509Certificate = decodeCertificate(certificate)
     val javaPublicKey = x509Certificate.publicKey
     val javaSignature = Signature.getInstance(x509Certificate.sigAlgName)
@@ -56,8 +57,8 @@ class JavaSecuritySignage : Signage {
         1
       )
     )
-    javaSignature.update(data)
-    return javaSignature.verify(signature)
+    javaSignature.update(data.toByteArray())
+    return javaSignature.verify(signature.toByteArray())
   }
 
   /**

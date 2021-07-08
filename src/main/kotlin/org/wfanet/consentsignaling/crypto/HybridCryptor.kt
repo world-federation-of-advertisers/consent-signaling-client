@@ -3,9 +3,9 @@ package org.wfanet.consentsignaling.crypto
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 /**
- * Crypto is a simple interface that be implemented to encrypt and decrypt bytes
+ * HybridCryptor is a simple interface that be implemented to encrypt and decrypt bytes
  */
-interface Crypto {
+interface HybridCryptor {
   /**
    * encrypt will encrypt data using the public key stored in the EncryptionPublicKey Protobuf
    */

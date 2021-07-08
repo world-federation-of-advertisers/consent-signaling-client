@@ -1,6 +1,7 @@
 package org.wfanet.consentsignaling.crypto
 
 import com.google.crypto.tink.KeysetHandle
+import com.google.protobuf.ByteString
 import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
@@ -34,7 +35,7 @@ class PrivateKeyHandle internal constructor(
    * 'crypto' module internal use only
    */
   internal fun toJavaPrivateKey(): PrivateKey {
-    return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(toByteArray()))
+    return KeyFactory.getInstance("RSA").generatePrivate(PKCS8EncodedKeySpec(toByteString().toByteArray()))
   }
 
   /**
@@ -42,7 +43,7 @@ class PrivateKeyHandle internal constructor(
    *
    * 'crypto' module internal use only
    */
-  internal fun toByteArray(): ByteArray {
+  internal fun toByteString(): ByteString {
     return keyStore.readPrivateKey(this)
   }
 }

@@ -1,5 +1,6 @@
 package org.wfanet.consentsignaling.crypto.signage
 
+import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.Certificate
 
@@ -11,12 +12,12 @@ class NoSignage : Signage {
   override fun sign(
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
-    data: ByteArray
+    data: ByteString
   ): ByteArray {
     return "".toByteArray()
   }
 
-  override fun verify(certificate: Certificate, signature: ByteArray, data: ByteArray): Boolean {
+  override fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean {
     return true
   }
 }

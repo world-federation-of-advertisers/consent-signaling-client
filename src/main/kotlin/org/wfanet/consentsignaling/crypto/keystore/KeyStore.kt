@@ -1,5 +1,6 @@
 package org.wfanet.consentsignaling.crypto.keystore
 
+import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
 
 /**
@@ -16,7 +17,7 @@ abstract class KeyStore {
   /**
    * Store the a private key in KeyStorage and returns a PrivateKeyHandle
    */
-  abstract fun storePrivateKeyDER(id: String, privateKeyBytes: ByteArray): PrivateKeyHandle
+  abstract fun storePrivateKeyDER(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
   /**
    * Retrieves a PrivateKeyHandle of an existing key in KeyStore
@@ -27,5 +28,5 @@ abstract class KeyStore {
    * Reads the contents of a private key stored in KeyStore.  This can only be access by this
    * 'crypto' module
    */
-  internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteArray
+  internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString
 }
