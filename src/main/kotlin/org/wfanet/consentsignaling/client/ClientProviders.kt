@@ -1,17 +1,15 @@
 package org.wfanet.consentsignaling.client
 
-import org.wfanet.consentsignaling.crypto.HybridCryptor
-import org.wfanet.consentsignaling.crypto.NoHybridCryptor
-import org.wfanet.consentsignaling.crypto.signage.JavaSecuritySignage
-import org.wfanet.consentsignaling.crypto.signage.Signage
+import org.wfanet.consentsignaling.crypto.hybridencryption.FakeHybridCryptor
+import org.wfanet.consentsignaling.crypto.hybridencryption.HybridCryptor
+import org.wfanet.consentsignaling.crypto.signage.JavaSecuritySigner
+import org.wfanet.consentsignaling.crypto.signage.Signer
+
+/** signage can verify and sign signatures (currently using java security library implementation) */
+var signer: Signer = JavaSecuritySigner()
 
 /**
- * signage can verify and sign signatures (currently using java security library implementation)
+ * hybridcrypto can encrypt and decrypt data (currently using 'no encryption' implementation, but
+ * will soon be changed to TinkCrypto [which is the Crypto implemenation based on Tink]
  */
-var signage: Signage = JavaSecuritySignage()
-
-/**
- * crypto can encrypt and decrypt data (currently using 'no encryption' implementation, but will
- * soon be changed to TinkCrypto [which is the Crypto implemenation based on Tink]
- */
-var hybridCryptor: HybridCryptor = NoHybridCryptor()
+var hybridCryptor: HybridCryptor = FakeHybridCryptor()

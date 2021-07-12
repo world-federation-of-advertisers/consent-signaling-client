@@ -1,12 +1,12 @@
-package org.wfanet.consentsignaling.crypto.keystore
+package org.wfanet.consentsignaling.crypto.keys
 
 import com.google.protobuf.ByteString
-import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
 
 /**
  * A simple "In-Memory" implementation of KeyStore using a HashMap
  *
- * This is for bringup and unit testing only. This is not secure and should not be used in production.
+ * This is for bringup and unit testing only. This is not secure and should not be used in
+ * production.
  */
 class InMemoryKeyStore : KeyStore() {
   private val keyStoreMap = HashMap<String, ByteString>()

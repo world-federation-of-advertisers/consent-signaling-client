@@ -2,9 +2,9 @@ package org.wfanet.consentsignaling.client.duchy
 
 import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.client.hybridCryptor
-import org.wfanet.consentsignaling.client.signage
+import org.wfanet.consentsignaling.client.signer
 import org.wfanet.consentsignaling.common.generateDataProviderListHash
-import org.wfanet.consentsignaling.crypto.PrivateKeyHandle
+import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement
@@ -13,7 +13,7 @@ import org.wfanet.measurement.system.v1alpha.Computation
 import org.wfanet.measurement.system.v1alpha.Requisition
 
 /**
- * Verifies the EDP Participation using the Duchies' Computation and Requisition against the
+ * Verifies the EDP Participation using the Duchy's Computation and Requisition against the
  * DataProviderCertificate
  */
 fun verifyEdpParticipationSignature(
@@ -26,25 +26,27 @@ fun verifyEdpParticipationSignature(
   // Get the Signature...
   val signature = requisition.dataProviderParticipationSignature
   // Generate the Data Provider List Hash
-  val dataProviderListHash: ByteString = generateDataProviderListHash(
-    computation.dataProviderList,
-    computation.dataProviderListSalt
-  )
+  val dataProviderListHash: ByteString =
+    generateDataProviderListHash(computation.dataProviderList, computation.dataProviderListSalt)
   // Calculate the Requisition Fingerprint
-  val requisitionFingerprint = ByteString.copyFrom(
-    requisition.requisitionSpecHash.toByteArray()
-      .plus(dataProviderListHash.toByteArray())
-      .plus(computation.measurementSpec.toByteArray())
-  )
+  val requisitionFingerprint =
+    ByteString.copyFrom(
+      requisition
+        .requisitionSpecHash
+        .toByteArray()
+        .plus(dataProviderListHash.toByteArray())
+        .plus(computation.measurementSpec.toByteArray())
+    )
 
-  // TODO Verify the EdpParticipantSignature has not been previously reused to protect against replay attacks
+  // TODO Verify the EdpParticipantSignature has not been previously reused to protect against
+  // replay attacks
 
-  return signage.verify(dataProviderCertificate, signature, requisitionFingerprint)
+  return signer.verify(dataProviderCertificate, signature, requisitionFingerprint)
 }
 
 /**
- * Sign and encrypts the Result into a serialized SignedData ProtoBuf
- * The aggregator certificate is required to determine the algorithm type of the signature
+ * Sign and encrypts the Result into a serialized SignedData ProtoBuf The aggregator certificate is
+ * required to determine the algorithm type of the signature
  */
 fun signAndEncryptResult(
   result: Measurement.Result,
@@ -53,13 +55,16 @@ fun signAndEncryptResult(
   measurementPublicKey: EncryptionPublicKey
 ): ByteArray {
   // Sign the result with the private key
-  val signature = signage.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteString())
+  val signature = signer.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteString())
 
   // Create the SignedData
-  val signedData = SignedData.newBuilder().also {
-    it.data = result.toByteString()
-    it.signature = ByteString.copyFrom(signature)
-  }.build()
+  val signedData =
+    SignedData.newBuilder()
+      .also {
+        it.data = result.toByteString()
+        it.signature = ByteString.copyFrom(signature)
+      }
+      .build()
   // Encrypt the SignedData
   return hybridCryptor.encrypt(measurementPublicKey, signedData.toByteArray())
 }

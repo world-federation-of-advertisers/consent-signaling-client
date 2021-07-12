@@ -4,10 +4,10 @@ import com.google.protobuf.ByteString
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.wfanet.consentsignaling.client.hybridCryptor
-import org.wfanet.consentsignaling.client.signage
-import org.wfanet.consentsignaling.crypto.NoHybridCryptor
-import org.wfanet.consentsignaling.crypto.keystore.InMemoryKeyStore
-import org.wfanet.consentsignaling.crypto.signage.NoSignage
+import org.wfanet.consentsignaling.client.signer
+import org.wfanet.consentsignaling.crypto.hybridencryption.FakeHybridCryptor
+import org.wfanet.consentsignaling.crypto.keys.InMemoryKeyStore
+import org.wfanet.consentsignaling.crypto.signage.FakeSigner
 import org.wfanet.measurement.api.v2alpha.Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement
@@ -24,75 +24,84 @@ import org.wfanet.measurement.system.v1alpha.Requisition
 class DuchyClientTest {
   @Test
   fun `duchy verify edp participation signature`() {
-    signage = NoSignage()
-    hybridCryptor = NoHybridCryptor()
+    signer = FakeSigner()
+    hybridCryptor = FakeHybridCryptor()
 
-    /**
-     * Items already known to the duchy
-     */
-    val computation = Computation.newBuilder().also {
-      it.dataProviderList // TODO
-      it.dataProviderListSalt // TODO
-      it.measurementSpec = MeasurementSpec.newBuilder().build().toByteString()
-    }.build()
+    /** Items already known to the duchy */
+    val computation =
+      Computation.newBuilder()
+        .also {
+          it.dataProviderList // TODO
+          it.dataProviderListSalt // TODO
+          it.measurementSpec = MeasurementSpec.newBuilder().build().toByteString()
+        }
+        .build()
 
-    val requisition = Requisition.newBuilder().also {
-      it.dataProviderCertificate // TODO
-      it.dataProviderParticipationSignature // TODO
-    }.build()
+    val requisition =
+      Requisition.newBuilder()
+        .also {
+          it.dataProviderCertificate // TODO
+          it.dataProviderParticipationSignature // TODO
+        }
+        .build()
 
-    val dataProviderCertificate = Certificate.newBuilder().also {
-      it.x509Der // TODO
-    }.build()
+    val dataProviderCertificate =
+      Certificate.newBuilder()
+        .also {
+          it.x509Der // TODO
+        }
+        .build()
 
-    /**
-     * Verify EDP Signature
-     */
+    /** Verify EDP Signature */
     assertTrue(verifyEdpParticipationSignature(computation, requisition, dataProviderCertificate))
   }
 
   @Test
   fun `duchy sign and encrypt result`() {
-    signage = NoSignage()
-    hybridCryptor = NoHybridCryptor()
+    signer = FakeSigner()
+    hybridCryptor = FakeHybridCryptor()
 
-    /**
-     * Items already setup in the aggregator duchy
-     */
+    /** Items already setup in the aggregator duchy */
     // Duchy Private Key Storage
     val duchyPrivateKeyID = "duchyPrivateKeyID"
     val privateKeyBytes = ByteString.copyFrom("TODO".toByteArray())
     val keystore = InMemoryKeyStore()
     keystore.storePrivateKeyDER(duchyPrivateKeyID, privateKeyBytes)
     // Duchy/Aggregator Certificate
-    val aggregatorCertificate = Certificate.newBuilder().also {
-      it.x509Der // TODO
-    }.build()
-    val measurementConsumerPublicKey = EncryptionPublicKey.newBuilder().also {
-      it.type // TODO
-      it.publicKeyInfo // TODO
-    }.build()
+    val aggregatorCertificate =
+      Certificate.newBuilder()
+        .also {
+          it.x509Der // TODO
+        }
+        .build()
+    val measurementConsumerPublicKey =
+      EncryptionPublicKey.newBuilder()
+        .also {
+          it.type // TODO
+          it.publicKeyInfo // TODO
+        }
+        .build()
 
-    /**
-     * Items already known to the duchy/aggregator
-     */
-    val result = Measurement.Result.newBuilder().also {
-      // TODO
-    }.build()
+    /** Items already known to the duchy/aggregator */
+    val result =
+      Measurement.Result.newBuilder()
+        .also {
+          // TODO
+        }
+        .build()
 
-    /**
-     * Sign and Encrypt
-     */
+    /** Sign and Encrypt */
     val duchyPrivateKeyHandle = keystore.getPrivateKeyHandle(duchyPrivateKeyID)
     Measurement.newBuilder().also {
-      it.encryptedResult = ByteString.copyFrom(
-        signAndEncryptResult(
-          result,
-          duchyPrivateKeyHandle,
-          aggregatorCertificate,
-          measurementConsumerPublicKey
+      it.encryptedResult =
+        ByteString.copyFrom(
+          signAndEncryptResult(
+            result,
+            duchyPrivateKeyHandle,
+            aggregatorCertificate,
+            measurementConsumerPublicKey
+          )
         )
-      )
     }
   }
 }

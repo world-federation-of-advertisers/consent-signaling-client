@@ -6,9 +6,7 @@ import java.security.MessageDigest
 object CommonConstants {
   const val HASH_ALGORITHM = "SHA-256"
 }
-/**
- * Generates a SHA-256 DataProviderList Hash from the dataProviderList and salt
- */
+/** Generates a SHA-256 DataProviderList Hash from the dataProviderList and salt */
 fun generateDataProviderListHash(
   dataProviderList: ByteString,
   dataProviderListSalt: ByteString

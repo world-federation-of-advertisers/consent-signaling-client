@@ -39,6 +39,18 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "wfa_common_jvm2",
+    sha256 = "fdec9ee4ddd0fde72b3636b917fb42693f9ea5a05dfa350eda4c0d64f01f03ef",
+    strip_prefix = "common-jvm-e24da810f6c1a85ccb8297bf2bb83d47332f76df",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/e24da810f6c1a85ccb8297bf2bb83d47332f76df.tar.gz",
+)
+
+local_repository(
+    name = "wfa_common_jvm",
+    path = "/Development/common-jvm",
+)
+
 # @com_google_truth_truth
 load("//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
 
@@ -123,9 +135,10 @@ MAVEN_ARTIFACTS.update({
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
     "com.google.code.gson:gson": "2.8.6",
     "com.google.guava:guava": "30.0-jre",
-    "com.nhaarman.mockitokotlin2:mockito-kotlin": "2.2.0",
     "info.picocli:picocli": "4.4.0",
     "junit:junit": "4.13",
+    "org.conscrypt:conscrypt-openjdk-uber": "2.5.2",
+    "org.mockito.kotlin:mockito-kotlin": "3.2.0",
 })
 
 maven_install(
