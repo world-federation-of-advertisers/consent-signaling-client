@@ -9,7 +9,7 @@ kt_jvm_library(
     name = "client",
     srcs = glob(["**/*.kt"]),
     deps = [
-        "//src/main/kotlin/org/wfanet/consentsignaling/common",
+        "//src/main/kotlin/org/wfanet/consentsignaling/crypto/hash",
         "//src/main/kotlin/org/wfanet/consentsignaling/crypto/hybridencryption:hybrid_encryption",
         "//src/main/kotlin/org/wfanet/consentsignaling/crypto/signage",
         "//src/main/proto/wfa/measurement/api/v2alpha:certificate_java_proto",

@@ -2,11 +2,9 @@ package org.wfanet.consentsignaling.crypto.keys
 
 import com.google.crypto.tink.KeysetHandle
 import com.google.protobuf.ByteString
-import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
-
-// import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.readPrivateKey
 
 /**
  * PrivateKey Handles can only be created inside of this 'crypto' module. The allow a client to have
@@ -28,12 +26,10 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
   }
 
   /** Converts a PrivateKeyHandle into a Java Security Private Key object */
+  // TODO update this so we don't need to expose toJavaPrivateKey to encryption/signing libraries
   fun toJavaPrivateKey(): PrivateKey {
-    return readPrivateKey(PKCS8EncodedKeySpec(toByteString().toByteArray()))
-  }
-
-  internal fun readPrivateKey(data: PKCS8EncodedKeySpec, algorithm: String = "RSA"): PrivateKey {
-    return KeyFactory.getInstance(algorithm).generatePrivate(data)
+    println("!:${toByteString()}")
+    return readPrivateKey(PKCS8EncodedKeySpec(toByteString().toByteArray()), "RSA")
   }
 
   /**

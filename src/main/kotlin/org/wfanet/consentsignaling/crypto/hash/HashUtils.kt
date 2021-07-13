@@ -1,4 +1,4 @@
-package org.wfanet.consentsignaling.common
+package org.wfanet.consentsignaling.crypto.hash
 
 import com.google.protobuf.ByteString
 import java.security.MessageDigest

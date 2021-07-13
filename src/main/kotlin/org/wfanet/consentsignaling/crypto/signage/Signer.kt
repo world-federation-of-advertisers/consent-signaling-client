@@ -18,12 +18,13 @@ interface Signer {
 
   /**
    * Sign a data byte array using a PrivateKeyHandle stored in Keystore. The certificate is used to
-   * determine the signature algorithm to be used
+   * determine the signature algorithm to be used.
    */
   fun sign(
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
     data: ByteString
   ): ByteArray
-  fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean
+
+  fun verify(certificate: Certificate, signature: ByteArray, data: ByteString): Boolean
 }

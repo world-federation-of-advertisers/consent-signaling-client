@@ -3,7 +3,7 @@ package org.wfanet.consentsignaling.client.duchy
 import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.client.hybridCryptor
 import org.wfanet.consentsignaling.client.signer
-import org.wfanet.consentsignaling.common.generateDataProviderListHash
+import org.wfanet.consentsignaling.crypto.hash.generateDataProviderListHash
 import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
@@ -41,7 +41,7 @@ fun verifyEdpParticipationSignature(
   // TODO Verify the EdpParticipantSignature has not been previously reused to protect against
   // replay attacks
 
-  return signer.verify(dataProviderCertificate, signature, requisitionFingerprint)
+  return signer.verify(dataProviderCertificate, signature.toByteArray(), requisitionFingerprint)
 }
 
 /**

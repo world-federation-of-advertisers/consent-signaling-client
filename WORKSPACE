@@ -40,15 +40,10 @@ http_archive(
 )
 
 http_archive(
-    name = "wfa_common_jvm2",
-    sha256 = "fdec9ee4ddd0fde72b3636b917fb42693f9ea5a05dfa350eda4c0d64f01f03ef",
-    strip_prefix = "common-jvm-e24da810f6c1a85ccb8297bf2bb83d47332f76df",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/e24da810f6c1a85ccb8297bf2bb83d47332f76df.tar.gz",
-)
-
-local_repository(
     name = "wfa_common_jvm",
-    path = "/Development/common-jvm",
+    sha256 = "5034c5ffefa54ea6d5b617e519def76ccb4a6b3f99a7aaf65839ceb055813c29",
+    strip_prefix = "common-jvm-08f219ffd60f6597a5f9d6eba909eaf5565b58d6",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/08f219ffd60f6597a5f9d6eba909eaf5565b58d6.tar.gz",
 )
 
 # @com_google_truth_truth

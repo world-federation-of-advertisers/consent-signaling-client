@@ -10,10 +10,10 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
  */
 class FakeHybridCryptor : HybridCryptor {
   override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteArray): ByteArray {
-    return data.reversed().toByteArray()
+    return data.reversedArray()
   }
 
   override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteArray): ByteArray {
-    return encryptedData.reversed().toByteArray()
+    return encryptedData.reversedArray()
   }
 }

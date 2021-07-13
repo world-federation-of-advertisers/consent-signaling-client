@@ -13,7 +13,7 @@ import com.google.protobuf.ByteString
 abstract class KeyStore {
   class KeyNotFoundException(id: String) : Exception("Private key $id was not found")
 
-  /** Store the a private key in KeyStorage and returns a PrivateKeyHandle */
+  /** Store the private key in KeyStorage and returns a PrivateKeyHandle */
   abstract fun storePrivateKeyDER(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
   /** Retrieves a PrivateKeyHandle of an existing key in KeyStore */
