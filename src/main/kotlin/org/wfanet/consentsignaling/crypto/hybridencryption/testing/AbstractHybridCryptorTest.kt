@@ -41,12 +41,8 @@ abstract class AbstractHybridCryptorTest {
   fun `encrypt and then decrypt should equal input`() = runBlocking {
     keystore.storePrivateKeyDER(KEYSTORE_ADDRESS, PRIVATE_KEY)
     val privateKeyHandle = keystore.getPrivateKeyHandle("some-keystore-address")
-    assertThat(
-        hybridCryptor.decrypt(
-          privateKeyHandle,
-          hybridCryptor.encrypt(ENCRYPTION_PUBLIC_KEY, PLAINTEXT)
-        )
-      )
-      .isEqualTo(PLAINTEXT)
+    val encryptedValue = hybridCryptor.encrypt(ENCRYPTION_PUBLIC_KEY, PLAINTEXT)
+    val decryptedValue = hybridCryptor.decrypt(privateKeyHandle, encryptedValue)
+    assertThat(decryptedValue).isEqualTo(PLAINTEXT)
   }
 }
