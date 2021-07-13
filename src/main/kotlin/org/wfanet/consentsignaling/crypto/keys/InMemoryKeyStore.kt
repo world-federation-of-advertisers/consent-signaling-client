@@ -25,7 +25,7 @@ import com.google.protobuf.ByteString
 class InMemoryKeyStore : KeyStore() {
   private val keyStoreMap = HashMap<String, ByteString>()
 
-  override fun storePrivateKeyDER(id: String, privateKeyBytes: ByteString): PrivateKeyHandle {
+  override fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle {
     keyStoreMap[id] = privateKeyBytes
     return PrivateKeyHandle(id, this)
   }
@@ -34,13 +34,27 @@ class InMemoryKeyStore : KeyStore() {
     keyStoreMap[id]?.let {
       return PrivateKeyHandle(id, this)
     }
-    throw KeyNotFoundException(id)
+    throw KeyStore.KeyNotFoundException(id)
+  }
+
+  override fun isFound(id: String): Boolean {
+    keyStoreMap[id]?.let {
+      return true
+    }
+    return false
+  }
+
+  override fun isFound(privateKeyHandle: PrivateKeyHandle): Boolean {
+    keyStoreMap[privateKeyHandle.id]?.let {
+      return true
+    }
+    return false
   }
 
   override fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString {
     keyStoreMap[privateKeyHandle.id]?.let {
       return it
     }
-    throw KeyNotFoundException(privateKeyHandle.id)
+    throw KeyStore.KeyNotFoundException(privateKeyHandle.id)
   }
 }

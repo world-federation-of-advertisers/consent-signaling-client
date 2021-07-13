@@ -77,10 +77,10 @@ class DuchyClientTest {
 
     /** Items already setup in the aggregator duchy */
     // Duchy Private Key Storage
-    val duchyPrivateKeyID = "duchyPrivateKeyID"
+    val duchyPrivateKeyId = "duchyPrivateKeyID"
     val privateKeyBytes = ByteString.copyFrom("TODO".toByteArray())
     val keystore = InMemoryKeyStore()
-    keystore.storePrivateKeyDER(duchyPrivateKeyID, privateKeyBytes)
+    keystore.storePrivateKeyDer(duchyPrivateKeyId, privateKeyBytes)
     // Duchy/Aggregator Certificate
     val aggregatorCertificate =
       Certificate.newBuilder()
@@ -105,7 +105,7 @@ class DuchyClientTest {
         .build()
 
     /** Sign and Encrypt */
-    val duchyPrivateKeyHandle = keystore.getPrivateKeyHandle(duchyPrivateKeyID)
+    val duchyPrivateKeyHandle = keystore.getPrivateKeyHandle(duchyPrivateKeyId)
     Measurement.newBuilder().also {
       it.encryptedResult =
         ByteString.copyFrom(

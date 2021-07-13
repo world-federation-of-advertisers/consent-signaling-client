@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.consentsignaling.crypto.hash
+package org.wfanet.consentsignaling.crypto.hybridencryption
 
-import com.google.protobuf.ByteString
-import java.security.MessageDigest
+import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
+import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
-const val HASH_ALGORITHM = "SHA-256"
+/** TODO EciesCryptor will be an implementation of HybridCryptor that uses ICIES */
+class EciesCryptor : HybridCryptor {
+  override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteArray): ByteArray {
+    TODO("Not yet implemented")
+  }
 
-/** Generates a SHA-256 DataProviderList Hash from the dataProviderList and salt */
-fun generateDataProviderListHash(
-  dataProviderList: ByteString,
-  dataProviderListSalt: ByteString
-): ByteString {
-  val sha256MessageDigest = MessageDigest.getInstance(HASH_ALGORITHM)
-  sha256MessageDigest.update(dataProviderListSalt.toByteArray())
-  return ByteString.copyFrom(sha256MessageDigest.digest(dataProviderList.toByteArray()))
+  override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteArray): ByteArray {
+    TODO("Not yet implemented")
+  }
 }

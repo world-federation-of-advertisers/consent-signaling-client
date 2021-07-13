@@ -20,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import org.wfanet.consentsignaling.crypto.keys.InMemoryKeyStore
+import org.wfanet.consentsignaling.crypto.keys.KeyStore
 import org.wfanet.consentsignaling.crypto.signage.Signer
 import org.wfanet.measurement.api.v2alpha.Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
@@ -28,14 +29,16 @@ private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext")
 private val KEYSTORE_ADDRESS = "some-keystore-address"
 private val ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
-abstract class AbstractSignerTest(val certificate: Certificate, val privateKey: ByteString) {
+abstract class AbstractSignerTest(
+  val certificate: Certificate,
+  val privateKey: ByteString,
+  val keystore: KeyStore = InMemoryKeyStore()
+) {
   abstract val signer: Signer
-
-  val keystore = InMemoryKeyStore()
 
   @Before
   open fun beforeEach() {
-    keystore.storePrivateKeyDER(KEYSTORE_ADDRESS, privateKey)
+    keystore.storePrivateKeyDer(KEYSTORE_ADDRESS, privateKey)
   }
 
   @Test

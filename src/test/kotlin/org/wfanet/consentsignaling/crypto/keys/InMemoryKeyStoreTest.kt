@@ -12,20 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.consentsignaling.crypto.hybridencryption
+package org.wfanet.consentsignaling.crypto.keys
 
-import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
-import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.consentsignaling.crypto.keys.testing.AbstractKeyStoreTest
 
-/**
- * TODO ECIESCryptor will be an implementation of Crypto that uses Google Tink as its crypto engine
- */
-class ECIESCryptor : HybridCryptor {
-  override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteArray): ByteArray {
-    TODO("Not yet implemented")
-  }
-
-  override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteArray): ByteArray {
-    TODO("Not yet implemented")
-  }
+class InMemoryKeyStoreTest : AbstractKeyStoreTest() {
+  override val keyStore = InMemoryKeyStore()
 }

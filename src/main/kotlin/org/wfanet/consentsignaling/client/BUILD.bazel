@@ -1,16 +1,13 @@
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
-load("@wfa_measurement_system//build:defs.bzl", "test_target")
 
-package(default_visibility = [
-    test_target(":__subpackages__"),
-])
+package(default_visibility = ["//visibility:public"])
 
 kt_jvm_library(
     name = "client",
     srcs = glob(["**/*.kt"]),
     deps = [
         "//src/main/kotlin/org/wfanet/consentsignaling/crypto/hash",
-        "//src/main/kotlin/org/wfanet/consentsignaling/crypto/hybridencryption:hybrid_encryption",
+        "//src/main/kotlin/org/wfanet/consentsignaling/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/consentsignaling/crypto/signage",
         "//src/main/proto/wfa/measurement/api/v2alpha:certificate_java_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",

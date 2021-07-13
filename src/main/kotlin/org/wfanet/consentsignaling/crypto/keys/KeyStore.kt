@@ -28,14 +28,23 @@ abstract class KeyStore {
   class KeyNotFoundException(id: String) : Exception("Private key $id was not found")
 
   /** Store the private key in KeyStorage and returns a PrivateKeyHandle */
-  abstract fun storePrivateKeyDER(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
+  @Throws(KeyNotFoundException::class)
+  abstract fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
   /** Retrieves a PrivateKeyHandle of an existing key in KeyStore */
+  @Throws(KeyNotFoundException::class)
   abstract fun getPrivateKeyHandle(id: String): PrivateKeyHandle
+
+  /** Return a [boolean] if a key exists in keyStore */
+  abstract fun isFound(id: String): Boolean
+
+  /** Return a [boolean] if a keyHandle exists in keyStore */
+  abstract fun isFound(privateKeyHandle: PrivateKeyHandle): Boolean
 
   /**
    * Reads the contents of a private key stored in KeyStore. This can only be access by this
    * 'crypto' module
    */
+  @Throws(KeyNotFoundException::class)
   internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString
 }

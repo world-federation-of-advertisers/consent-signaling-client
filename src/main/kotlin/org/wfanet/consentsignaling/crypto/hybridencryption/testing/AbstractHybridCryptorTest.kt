@@ -20,6 +20,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.wfanet.consentsignaling.crypto.hybridencryption.HybridCryptor
 import org.wfanet.consentsignaling.crypto.keys.InMemoryKeyStore
+import org.wfanet.consentsignaling.crypto.keys.KeyStore
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext").toByteArray()
@@ -27,10 +28,8 @@ private val PRIVATE_KEY = ByteString.copyFromUtf8("some-private-key")
 private val KEYSTORE_ADDRESS = "some-keystore-address"
 private val ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
-abstract class AbstractHybridCryptorTest {
+abstract class AbstractHybridCryptorTest(val keystore: KeyStore = InMemoryKeyStore()) {
   abstract val hybridCryptor: HybridCryptor
-
-  val keystore = InMemoryKeyStore()
 
   @Test
   fun `encrypt should not equal input`() = runBlocking {
@@ -39,7 +38,7 @@ abstract class AbstractHybridCryptorTest {
 
   @Test
   fun `encrypt and then decrypt should equal input`() = runBlocking {
-    keystore.storePrivateKeyDER(KEYSTORE_ADDRESS, PRIVATE_KEY)
+    keystore.storePrivateKeyDer(KEYSTORE_ADDRESS, PRIVATE_KEY)
     val privateKeyHandle = keystore.getPrivateKeyHandle("some-keystore-address")
     val encryptedValue = hybridCryptor.encrypt(ENCRYPTION_PUBLIC_KEY, PLAINTEXT)
     val decryptedValue = hybridCryptor.decrypt(privateKeyHandle, encryptedValue)

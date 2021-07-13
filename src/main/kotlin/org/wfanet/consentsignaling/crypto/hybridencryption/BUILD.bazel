@@ -6,7 +6,7 @@ package(default_visibility = [
 ])
 
 kt_jvm_library(
-    name = "hybrid_encryption",
+    name = "hybridencryption",
     srcs = glob(["*.kt"]),
     deps = [
         "//imports/java/com/google/crypto/tink",

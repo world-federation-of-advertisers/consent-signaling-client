@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package org.wfanet.consentsignaling.crypto.keys
 
 import com.google.crypto.tink.KeysetHandle
@@ -42,7 +41,6 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
   /** Converts a PrivateKeyHandle into a Java Security Private Key object */
   // TODO update this so we don't need to expose toJavaPrivateKey to encryption/signing libraries
   fun toJavaPrivateKey(): PrivateKey {
-    println("!:${toByteString()}")
     return readPrivateKey(PKCS8EncodedKeySpec(toByteString().toByteArray()), "RSA")
   }
 
