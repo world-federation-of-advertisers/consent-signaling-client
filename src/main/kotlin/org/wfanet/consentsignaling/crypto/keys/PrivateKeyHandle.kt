@@ -20,17 +20,17 @@ import java.security.spec.PKCS8EncodedKeySpec
 import org.wfanet.measurement.common.crypto.readPrivateKey
 
 /**
- * PrivateKey Handles can only be created inside of this 'crypto' module. The allow a client to have
+ * [PrivateKeyHandle] can only be created inside of this 'crypto' module. The allow a client to have
  * a handle to a private key, yet are not able to gain access to the contents of the private key.
  * Only the 'crypto' module can read the bytes of the private key.
  *
- * Convenience methods of toTinkKeysetHandle and toJavaPrivateKey are included and used by various
- * parts of the 'crypto' library
+ * Convenience methods of [toTinkKeysetHandle] and [toJavaPrivateKey] are included and used by
+ * various parts of the 'crypto' library
  */
 class PrivateKeyHandle internal constructor(val id: String, private val keyStore: KeyStore) {
 
   /**
-   * Converts the PrivateKeyHandle into a usable Tink KeysetHandle object (used by TinkCrypto)
+   * Converts the [PrivateKeyHandle] into a usable [TinkKeysetHandle] object (used by TinkCrypto)
    *
    * 'crypto' module internal use only
    */
@@ -38,14 +38,16 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
     TODO("Not yet implemented")
   }
 
-  /** Converts a PrivateKeyHandle into a Java Security Private Key object */
-  // TODO update this so we don't need to expose toJavaPrivateKey to encryption/signing libraries
+  /**
+   * Converts a [PrivateKeyHandle] into a Java Security Private Key object TODO update this so we
+   * don't need to expose toJavaPrivateKey to encryption/signing libraries
+   */
   fun toJavaPrivateKey(): PrivateKey {
     return readPrivateKey(PKCS8EncodedKeySpec(toByteString().toByteArray()), "RSA")
   }
 
   /**
-   * Returns the private key in a byte array (generic)
+   * Returns the private key to a [ByteString] (generic)
    *
    * 'crypto' module internal use only
    */

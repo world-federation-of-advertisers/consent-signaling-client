@@ -27,8 +27,8 @@ import org.wfanet.measurement.system.v1alpha.Computation
 import org.wfanet.measurement.system.v1alpha.Requisition
 
 /**
- * Verifies the EDP Participation using the Duchy's Computation and Requisition against the
- * DataProviderCertificate
+ * Verifies the EDP Participation using the Duchy's [Computation] and [Requisition] against the
+ * [dataProviderCertificate]
  */
 fun verifyEdpParticipationSignature(
   signer: Signer,
@@ -60,26 +60,26 @@ fun verifyEdpParticipationSignature(
 }
 
 /**
- * Sign and encrypts the Result into a serialized SignedData ProtoBuf. The aggregator certificate is
- * required to determine the algorithm type of the signature
+ * Sign and encrypts the [measurementResult] into a serialized [SignedData] ProtoBuf. The
+ * [aggregatorCertificate] is required to determine the algorithm type of the signature
  */
 fun signAndEncryptResult(
   signer: Signer,
   hybridCryptor: HybridCryptor,
-  result: Measurement.Result,
+  measurementResult: Measurement.Result,
   duchyPrivateKeyHandle: PrivateKeyHandle,
   aggregatorCertificate: Certificate,
   measurementPublicKey: EncryptionPublicKey
 ): ByteString {
   // Sign the result with the private key
   val measurementSignature =
-    signer.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteString())
+    signer.sign(aggregatorCertificate, duchyPrivateKeyHandle, measurementResult.toByteString())
 
   // Create the SignedData
   val signedData =
     SignedData.newBuilder()
       .also {
-        it.data = result.toByteString()
+        it.data = measurementResult.toByteString()
         it.signature = measurementSignature
       }
       .build()

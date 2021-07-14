@@ -23,16 +23,16 @@ object SignerConstants {
 }
 
 /**
- * Signer is a simple interface that be implemented to sign byte array's and verify signatures of
- * signed byte arrays
+ * [Signer] is a simple interface that be implemented to sign [ByteString] and verify [signature] of
+ * signed [ByteString].
  */
 interface Signer {
   class CertificateTypeNotSupported(supportedTypes: String) :
     Exception("Only $supportedTypes are supported")
 
   /**
-   * Sign a data byte array using a PrivateKeyHandle stored in Keystore. The certificate is used to
-   * determine the signature algorithm to be used.
+   * Sign a data [ByteString] using a [PrivateKeyHandle] stored in [Keystore]. The [certificate] is
+   * used to determine the algorithm to be used.
    */
   fun sign(
     certificate: Certificate,

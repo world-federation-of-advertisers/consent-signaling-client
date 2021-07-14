@@ -25,7 +25,7 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext")
 private val PRIVATE_KEY = ByteString.copyFromUtf8("some-private-key")
-private val KEYSTORE_ADDRESS = "some-keystore-address"
+private val KEYSTORE_ID = "some-keystore-id"
 private val ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
 abstract class AbstractHybridCryptorTest(val keystore: KeyStore = InMemoryKeyStore()) {
@@ -38,8 +38,8 @@ abstract class AbstractHybridCryptorTest(val keystore: KeyStore = InMemoryKeySto
 
   @Test
   fun `encrypt and then decrypt should equal input`() = runBlocking {
-    keystore.storePrivateKeyDer(KEYSTORE_ADDRESS, PRIVATE_KEY)
-    val privateKeyHandle = keystore.getPrivateKeyHandle("some-keystore-address")
+    keystore.storePrivateKeyDer(KEYSTORE_ID, PRIVATE_KEY)
+    val privateKeyHandle = keystore.getPrivateKeyHandle(KEYSTORE_ID)
     val encryptedValue = hybridCryptor.encrypt(ENCRYPTION_PUBLIC_KEY, PLAINTEXT)
     val decryptedValue = hybridCryptor.decrypt(privateKeyHandle, encryptedValue)
     assertThat(decryptedValue).isEqualTo(PLAINTEXT)

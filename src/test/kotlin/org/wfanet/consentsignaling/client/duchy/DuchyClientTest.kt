@@ -108,7 +108,7 @@ class DuchyClientTest {
         signAndEncryptResult(
           signer = FakeSigner(),
           hybridCryptor = FakeHybridCryptor(),
-          result = result,
+          measurementResult = result,
           duchyPrivateKeyHandle = duchyPrivateKeyHandle,
           aggregatorCertificate = aggregatorCertificate,
           measurementPublicKey = measurementConsumerPublicKey

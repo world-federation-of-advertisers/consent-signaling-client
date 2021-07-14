@@ -27,8 +27,8 @@ import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.Certificate
 
 /**
- * A Signer implementation using Java Security classes that can perform data signing and
- * verification of signatures
+ * A [Signer] implementation using Java Security classes that can perform data signing and
+ * verification of [signature]
  */
 class JavaSecuritySigner : Signer {
 

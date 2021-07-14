@@ -17,9 +17,9 @@ package org.wfanet.consentsignaling.crypto.keys
 import com.google.protobuf.ByteString
 
 /**
- * A simple "In-Memory" implementation of KeyStore using a HashMap
+ * A simple "In-Memory" implementation of [KeyStore] using a [HashMap]
  *
- * This is for bringup and unit testing only. This is not secure and should not be used in
+ * This is for bring-up and unit testing only. This is not secure and should not be used in
  * production.
  */
 class InMemoryKeyStore : KeyStore() {
