@@ -36,7 +36,7 @@ class JavaSecuritySigner : Signer {
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
     data: ByteString
-  ): ByteArray {
+  ): ByteString {
     val x509Certificate = decodeCertificate(certificate)
     val javaPrivateKey = privateKeyHandle.toJavaPrivateKey()
     val signature = Signature.getInstance(x509Certificate.sigAlgName)
@@ -51,10 +51,10 @@ class JavaSecuritySigner : Signer {
     )
     signature.initSign(javaPrivateKey)
     signature.update(data.toByteArray())
-    return signature.sign()
+    return ByteString.copyFrom(signature.sign())
   }
 
-  override fun verify(certificate: Certificate, signature: ByteArray, data: ByteString): Boolean {
+  override fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean {
     val x509Certificate = decodeCertificate(certificate)
     val javaPublicKey = x509Certificate.publicKey
     val javaSignature = Signature.getInstance(x509Certificate.sigAlgName)
@@ -69,7 +69,7 @@ class JavaSecuritySigner : Signer {
       )
     )
     javaSignature.update(data.toByteArray())
-    return javaSignature.verify(signature)
+    return javaSignature.verify(signature.toByteArray())
   }
 
   /** Decodes an X.509 certificate byte array into a Java Security Certificate object */

@@ -23,7 +23,7 @@ import org.wfanet.consentsignaling.crypto.keys.InMemoryKeyStore
 import org.wfanet.consentsignaling.crypto.keys.KeyStore
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
-private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext").toByteArray()
+private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext")
 private val PRIVATE_KEY = ByteString.copyFromUtf8("some-private-key")
 private val KEYSTORE_ADDRESS = "some-keystore-address"
 private val ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()

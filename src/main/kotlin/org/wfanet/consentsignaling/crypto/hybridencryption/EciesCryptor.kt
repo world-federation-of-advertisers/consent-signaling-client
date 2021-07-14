@@ -14,16 +14,17 @@
 
 package org.wfanet.consentsignaling.crypto.hybridencryption
 
+import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 /** TODO EciesCryptor will be an implementation of HybridCryptor that uses ICIES */
 class EciesCryptor : HybridCryptor {
-  override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteArray): ByteArray {
+  override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteString): ByteString {
     TODO("Not yet implemented")
   }
 
-  override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteArray): ByteArray {
+  override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteString): ByteString {
     TODO("Not yet implemented")
   }
 }

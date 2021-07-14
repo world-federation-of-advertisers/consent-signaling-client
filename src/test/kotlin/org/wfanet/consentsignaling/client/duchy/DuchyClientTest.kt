@@ -16,8 +16,6 @@ package org.wfanet.consentsignaling.client.duchy
 
 import com.google.protobuf.ByteString
 import org.junit.Test
-import org.wfanet.consentsignaling.client.hybridCryptor
-import org.wfanet.consentsignaling.client.signer
 import org.wfanet.consentsignaling.crypto.hybridencryption.FakeHybridCryptor
 import org.wfanet.consentsignaling.crypto.keys.InMemoryKeyStore
 import org.wfanet.consentsignaling.crypto.signage.FakeSigner
@@ -37,8 +35,6 @@ import org.wfanet.measurement.system.v1alpha.Requisition
 class DuchyClientTest {
   @Test
   fun `duchy verify edp participation signature`() {
-    signer = FakeSigner()
-    hybridCryptor = FakeHybridCryptor()
 
     /** Items already known to the duchy */
     val computation =
@@ -65,15 +61,16 @@ class DuchyClientTest {
         }
         .build()
 
-    /** TODO Verify EDP Signature */
-    // assertTrue(verifyEdpParticipationSignature(computation, requisition,
-    // dataProviderCertificate))
+    /**
+     * TODO Verify EDP Signature after we get a working Java Security Signer
+     * assertTrue(verifyEdpParticipationSignature( hybridCryptor = FakeHybridCryptor(), computation
+     * = computation, requisition = requisition, dataProviderCertificate = dataProviderCertificate
+     * ))
+     */
   }
 
   @Test
   fun `duchy sign and encrypt result`() {
-    signer = FakeSigner()
-    hybridCryptor = FakeHybridCryptor()
 
     /** Items already setup in the aggregator duchy */
     // Duchy Private Key Storage
@@ -108,13 +105,13 @@ class DuchyClientTest {
     val duchyPrivateKeyHandle = keystore.getPrivateKeyHandle(duchyPrivateKeyId)
     Measurement.newBuilder().also {
       it.encryptedResult =
-        ByteString.copyFrom(
-          signAndEncryptResult(
-            result,
-            duchyPrivateKeyHandle,
-            aggregatorCertificate,
-            measurementConsumerPublicKey
-          )
+        signAndEncryptResult(
+          signer = FakeSigner(),
+          hybridCryptor = FakeHybridCryptor(),
+          result = result,
+          duchyPrivateKeyHandle = duchyPrivateKeyHandle,
+          aggregatorCertificate = aggregatorCertificate,
+          measurementPublicKey = measurementConsumerPublicKey
         )
     }
   }

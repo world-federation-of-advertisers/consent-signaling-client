@@ -38,7 +38,7 @@ interface Signer {
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
     data: ByteString
-  ): ByteArray
+  ): ByteString
 
-  fun verify(certificate: Certificate, signature: ByteArray, data: ByteString): Boolean
+  fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean
 }

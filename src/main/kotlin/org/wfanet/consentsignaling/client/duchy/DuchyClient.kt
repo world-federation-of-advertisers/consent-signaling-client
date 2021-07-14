@@ -15,10 +15,10 @@
 package org.wfanet.consentsignaling.client.duchy
 
 import com.google.protobuf.ByteString
-import org.wfanet.consentsignaling.client.hybridCryptor
-import org.wfanet.consentsignaling.client.signer
 import org.wfanet.consentsignaling.crypto.hash.generateDataProviderListHash
+import org.wfanet.consentsignaling.crypto.hybridencryption.HybridCryptor
 import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
+import org.wfanet.consentsignaling.crypto.signage.Signer
 import org.wfanet.measurement.api.v2alpha.Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement
@@ -31,6 +31,7 @@ import org.wfanet.measurement.system.v1alpha.Requisition
  * DataProviderCertificate
  */
 fun verifyEdpParticipationSignature(
+  signer: Signer,
   computation: Computation,
   requisition: Requisition,
   dataProviderCertificate: Certificate
@@ -55,30 +56,33 @@ fun verifyEdpParticipationSignature(
   // TODO Verify the EdpParticipantSignature has not been previously reused to protect against
   // replay attacks
 
-  return signer.verify(dataProviderCertificate, signature.toByteArray(), requisitionFingerprint)
+  return signer.verify(dataProviderCertificate, signature, requisitionFingerprint)
 }
 
 /**
- * Sign and encrypts the Result into a serialized SignedData ProtoBuf The aggregator certificate is
+ * Sign and encrypts the Result into a serialized SignedData ProtoBuf. The aggregator certificate is
  * required to determine the algorithm type of the signature
  */
 fun signAndEncryptResult(
+  signer: Signer,
+  hybridCryptor: HybridCryptor,
   result: Measurement.Result,
   duchyPrivateKeyHandle: PrivateKeyHandle,
   aggregatorCertificate: Certificate,
   measurementPublicKey: EncryptionPublicKey
-): ByteArray {
+): ByteString {
   // Sign the result with the private key
-  val signature = signer.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteString())
+  val measurementSignature =
+    signer.sign(aggregatorCertificate, duchyPrivateKeyHandle, result.toByteString())
 
   // Create the SignedData
   val signedData =
     SignedData.newBuilder()
       .also {
         it.data = result.toByteString()
-        it.signature = ByteString.copyFrom(signature)
+        it.signature = measurementSignature
       }
       .build()
   // Encrypt the SignedData
-  return hybridCryptor.encrypt(measurementPublicKey, signedData.toByteArray())
+  return hybridCryptor.encrypt(measurementPublicKey, ByteString.copyFrom(signedData.toByteArray()))
 }

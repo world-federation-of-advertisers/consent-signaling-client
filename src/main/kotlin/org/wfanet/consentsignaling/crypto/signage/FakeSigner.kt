@@ -29,14 +29,16 @@ class FakeSigner(val signatureLength: Int = 10) : Signer {
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
     data: ByteString
-  ): ByteArray {
-    return data.toByteArray().reversedArray().take(signatureLength).toByteArray()
+  ): ByteString {
+    return ByteString.copyFrom(
+      data.toByteArray().reversedArray().take(signatureLength).toByteArray()
+    )
   }
 
-  override fun verify(certificate: Certificate, signature: ByteArray, data: ByteString): Boolean {
+  override fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean {
     return Arrays.equals(
       data.toByteArray().reversedArray().take(signatureLength).toByteArray(),
-      signature
+      signature.toByteArray()
     )
   }
 }
