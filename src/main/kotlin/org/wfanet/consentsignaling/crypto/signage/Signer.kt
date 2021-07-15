@@ -18,27 +18,26 @@ import com.google.protobuf.ByteString
 import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.Certificate
 
-object SignerConstants {
-  const val CERTIFICATE_TYPE = "X.509"
-}
+const val CERTIFICATE_TYPE = "X.509"
 
-/**
- * [Signer] is a simple interface that be implemented to sign [ByteString] and verify [signature] of
- * signed [ByteString].
- */
+/** [Signer] is a simple interface that be implemented to sign and verify data. */
 interface Signer {
   class CertificateTypeNotSupported(supportedTypes: String) :
     Exception("Only $supportedTypes are supported")
 
   /**
-   * Sign a data [ByteString] using a [PrivateKeyHandle] stored in [Keystore]. The [certificate] is
-   * used to determine the algorithm to be used.
+   * Sign [data] using a [PrivateKeyHandle]. The [certificate] is used to determine the algorithm to
+   * be used. Can return null private key is not found.
    */
   fun sign(
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
     data: ByteString
-  ): ByteString
+  ): ByteString?
 
+  /**
+   * Verify [signature] of [data]. The [certificate] is used to determine the algorithm to be used
+   * and for the public key.
+   */
   fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean
 }

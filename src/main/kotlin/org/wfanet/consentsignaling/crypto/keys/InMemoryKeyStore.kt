@@ -30,31 +30,17 @@ class InMemoryKeyStore : KeyStore() {
     return PrivateKeyHandle(id, this)
   }
 
-  override fun getPrivateKeyHandle(id: String): PrivateKeyHandle {
+  override fun getPrivateKeyHandle(id: String): PrivateKeyHandle? {
     keyStoreMap[id]?.let {
       return PrivateKeyHandle(id, this)
     }
-    throw KeyStore.KeyNotFoundException(id)
+    return null
   }
 
-  override fun isFound(id: String): Boolean {
-    keyStoreMap[id]?.let {
-      return true
-    }
-    return false
-  }
-
-  override fun isFound(privateKeyHandle: PrivateKeyHandle): Boolean {
-    keyStoreMap[privateKeyHandle.id]?.let {
-      return true
-    }
-    return false
-  }
-
-  override fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString {
+  override fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString? {
     keyStoreMap[privateKeyHandle.id]?.let {
       return it
     }
-    throw KeyStore.KeyNotFoundException(privateKeyHandle.id)
+    return null
   }
 }

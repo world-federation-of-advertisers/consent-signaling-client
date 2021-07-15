@@ -25,26 +25,18 @@ import com.google.protobuf.ByteString
  * contents (currently used by signage and crypto classes)
  */
 abstract class KeyStore {
-  class KeyNotFoundException(id: String) : Exception("Private key $id was not found")
 
-  /** Store the private key in KeyStorage and returns a PrivateKeyHandle */
-  @Throws(KeyNotFoundException::class)
+  /** Store the [privateKeyBytes] in [KeyStore] and returns a [PrivateKeyHandle] */
   abstract fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
-  /** Retrieves a PrivateKeyHandle of an existing key in KeyStore */
-  @Throws(KeyNotFoundException::class)
-  abstract fun getPrivateKeyHandle(id: String): PrivateKeyHandle
-
-  /** Return a [boolean] if a key exists in keyStore */
-  abstract fun isFound(id: String): Boolean
-
-  /** Return a [boolean] if a keyHandle exists in keyStore */
-  abstract fun isFound(privateKeyHandle: PrivateKeyHandle): Boolean
+  /**
+   * Retrieves a [PrivateKeyHandle] of an existing key in [KeyStore]. Returns null if not present
+   */
+  abstract fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
 
   /**
-   * Reads the contents of a private key stored in KeyStore. This can only be access by this
-   * 'crypto' module
+   * Reads the contents of a private key stored in inside the [PrivateKeyHandle] in the [KeyStore].
+   * This can only be access by this 'crypto' module. Returns null if not present.
    */
-  @Throws(KeyNotFoundException::class)
-  internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString
+  internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
 }

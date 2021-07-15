@@ -20,11 +20,9 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 /** [HybridCryptor] is a simple interface that be implemented to encrypt and decrypt bytes */
 interface HybridCryptor {
-  /**
-   * [encrypt] will encrypt data using the public key stored in the [EncryptionPublicKey] Protobuf
-   */
+  /** Encrypts [data] using the public key stored in the [EncryptionPublicKey] Protobuf */
   fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteString): ByteString
 
-  /** [decrypt] will decrypt data using a private key stored in [privateKeyHandle] */
+  /** Decrypts [data] using a private key stored in [privateKeyHandle] */
   fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteString): ByteString
 }

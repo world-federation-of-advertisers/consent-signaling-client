@@ -26,32 +26,32 @@ import java.security.spec.PSSParameterSpec
 import org.wfanet.consentsignaling.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.api.v2alpha.Certificate
 
-/**
- * A [Signer] implementation using Java Security classes that can perform data signing and
- * verification of [signature]
- */
+/** A [Signer] implementation using Java Security classes. */
 class JavaSecuritySigner : Signer {
 
   override fun sign(
     certificate: Certificate,
     privateKeyHandle: PrivateKeyHandle,
     data: ByteString
-  ): ByteString {
+  ): ByteString? {
     val x509Certificate = decodeCertificate(certificate)
     val javaPrivateKey = privateKeyHandle.toJavaPrivateKey()
-    val signature = Signature.getInstance(x509Certificate.sigAlgName)
-    signature.setParameter(
-      PSSParameterSpec(
-        "SHA-256",
-        "MGF1",
-        MGF1ParameterSpec.SHA256,
-        generatePrivateSaltLength(javaPrivateKey),
-        1
+    javaPrivateKey?.let {
+      val signature = Signature.getInstance(x509Certificate.sigAlgName)
+      signature.setParameter(
+        PSSParameterSpec(
+          "SHA-256",
+          "MGF1",
+          MGF1ParameterSpec.SHA256,
+          generatePrivateSaltLength(javaPrivateKey),
+          1
+        )
       )
-    )
-    signature.initSign(javaPrivateKey)
-    signature.update(data.toByteArray())
-    return ByteString.copyFrom(signature.sign())
+      signature.initSign(javaPrivateKey)
+      signature.update(data.toByteArray())
+      return ByteString.copyFrom(signature.sign())
+    }
+    return null
   }
 
   override fun verify(certificate: Certificate, signature: ByteString, data: ByteString): Boolean {
@@ -75,12 +75,12 @@ class JavaSecuritySigner : Signer {
   /** Decodes an X.509 certificate byte array into a Java Security Certificate object */
   private fun decodeCertificate(certificate: Certificate): X509Certificate {
     val javaCertificate =
-      CertificateFactory.getInstance(SignerConstants.CERTIFICATE_TYPE)
+      CertificateFactory.getInstance(CERTIFICATE_TYPE)
         .generateCertificate(ByteArrayInputStream(certificate.x509Der.toByteArray()))
     if (javaCertificate is X509Certificate) {
       return javaCertificate
     } else {
-      throw Signer.CertificateTypeNotSupported(SignerConstants.CERTIFICATE_TYPE)
+      throw Signer.CertificateTypeNotSupported(CERTIFICATE_TYPE)
     }
   }
 

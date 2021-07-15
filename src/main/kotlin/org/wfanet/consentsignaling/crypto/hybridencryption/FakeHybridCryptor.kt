@@ -20,8 +20,8 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 /**
  * [FakeHybridCryptor] is an implementation of [HybridCryptor] that actually does no crypto. It only
- * reverses the [ByteString]. This should only be used for bring-up, unit testing, or debugging. Do
- * not use in Production.
+ * reverses the [data]. This should only be used for bring-up, unit testing, or debugging. Do not
+ * use in production.
  */
 class FakeHybridCryptor : HybridCryptor {
   private fun reverseByteString(data: ByteString): ByteString {

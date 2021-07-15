@@ -26,7 +26,7 @@ import org.wfanet.measurement.api.v2alpha.Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 
 private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext")
-private val KEYSTORE_ADDRESS = "some-keystore-address"
+private val KEYSTORE_ID = "some-keystore-id"
 private val ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
 abstract class AbstractSignerTest(
@@ -38,19 +38,19 @@ abstract class AbstractSignerTest(
 
   @Before
   open fun beforeEach() {
-    keystore.storePrivateKeyDer(KEYSTORE_ADDRESS, privateKey)
+    keystore.storePrivateKeyDer(KEYSTORE_ID, privateKey)
   }
 
   @Test
   fun `sign should not equal input`() = runBlocking {
-    val privateKeyHandle = keystore.getPrivateKeyHandle(KEYSTORE_ADDRESS)
+    val privateKeyHandle = requireNotNull(keystore.getPrivateKeyHandle(KEYSTORE_ID))
     assertThat(signer.sign(certificate, privateKeyHandle, PLAINTEXT)).isNotEqualTo(PLAINTEXT)
   }
 
   @Test
   fun `sign and then verify should equal true`() = runBlocking {
-    val privateKeyHandle = keystore.getPrivateKeyHandle("some-keystore-address")
-    val signature = signer.sign(certificate, privateKeyHandle, PLAINTEXT)
+    val privateKeyHandle = requireNotNull(keystore.getPrivateKeyHandle(KEYSTORE_ID))
+    val signature = requireNotNull(signer.sign(certificate, privateKeyHandle, PLAINTEXT))
     assertThat(signer.verify(certificate, signature, PLAINTEXT)).isEqualTo(true)
   }
 }

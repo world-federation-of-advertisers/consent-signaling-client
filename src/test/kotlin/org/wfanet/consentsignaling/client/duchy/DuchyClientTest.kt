@@ -102,7 +102,7 @@ class DuchyClientTest {
         .build()
 
     /** Sign and Encrypt */
-    val duchyPrivateKeyHandle = keystore.getPrivateKeyHandle(duchyPrivateKeyId)
+    val duchyPrivateKeyHandle = requireNotNull(keystore.getPrivateKeyHandle(duchyPrivateKeyId))
     Measurement.newBuilder().also {
       it.encryptedResult =
         signAndEncryptResult(

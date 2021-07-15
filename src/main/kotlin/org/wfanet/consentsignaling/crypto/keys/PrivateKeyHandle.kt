@@ -42,8 +42,12 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
    * Converts a [PrivateKeyHandle] into a Java Security Private Key object TODO update this so we
    * don't need to expose toJavaPrivateKey to encryption/signing libraries
    */
-  fun toJavaPrivateKey(): PrivateKey {
-    return readPrivateKey(PKCS8EncodedKeySpec(toByteString().toByteArray()), "RSA")
+  fun toJavaPrivateKey(): PrivateKey? {
+    val internalPrivateKey = toByteString()
+    internalPrivateKey?.let {
+      return readPrivateKey(PKCS8EncodedKeySpec(internalPrivateKey.toByteArray()), "RSA")
+    }
+    return null
   }
 
   /**
@@ -51,7 +55,7 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
    *
    * 'crypto' module internal use only
    */
-  internal fun toByteString(): ByteString {
+  internal fun toByteString(): ByteString? {
     return keyStore.readPrivateKey(this)
   }
 }
