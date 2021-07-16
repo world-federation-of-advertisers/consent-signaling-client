@@ -1,0 +1,7 @@
+package_group(
+    name = "consent",
+    packages = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/...",
+        "//src/test/kotlin/org/wfanet/measurement/consent/...",
+    ],
+)
