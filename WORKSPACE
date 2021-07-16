@@ -1,6 +1,6 @@
 workspace(name = "consent_signaling_client")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # @bazel_skylib
 
@@ -22,59 +22,30 @@ http_archive(
     ],
 )
 
-http_archive(
-    name = "googletest",
-    sha256 = "94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91",
-    strip_prefix = "googletest-release-1.10.0",
-    urls = ["https://github.com/google/googletest/archive/release-1.10.0.zip"],
-)
-
-# Abseil C++ libraries
-http_archive(
-    name = "com_google_absl",
-    sha256 = "dd7db6815204c2a62a2160e32c55e97113b0a0178b2f090d6bab5ce36111db4b",
-    strip_prefix = "abseil-cpp-20210324.0",
-    urls = [
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20210324.0.tar.gz",
-    ],
-)
-
+# Measurement system.
 http_archive(
     name = "wfa_common_jvm",
-    sha256 = "5034c5ffefa54ea6d5b617e519def76ccb4a6b3f99a7aaf65839ceb055813c29",
-    strip_prefix = "common-jvm-08f219ffd60f6597a5f9d6eba909eaf5565b58d6",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/08f219ffd60f6597a5f9d6eba909eaf5565b58d6.tar.gz",
+    sha256 = "5ba35bbad90c92e412766b63e7d5f5dd64ff2ca30f46d0a37b2265f749862b1b",
+    strip_prefix = "common-jvm-84399a067dc78b6e6205ea4d1ec3ca27ea725abd",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/84399a067dc78b6e6205ea4d1ec3ca27ea725abd.tar.gz",
 )
 
 # @com_google_truth_truth
-load("//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
 
-# Measurement system.
-http_archive(
-    name = "wfa_measurement_system",
-    sha256 = "2c3b011338d8e92e6cc1576911fc5afed8806f99eb4aea78a18efdbe721957b3",
-    strip_prefix = "cross-media-measurement-b01485411d036a1cef7fc0e6026de6c42eeb06da",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement/archive/b01485411d036a1cef7fc0e6026de6c42eeb06da.tar.gz",
-)
+load("@wfa_common_jvm//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
 
 # @io_bazel_rules_kotlin
 
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:repo.bzl", "kotlinc_release", "rules_kotlin_repo")
+load("@wfa_common_jvm//build/io_bazel_rules_kotlin:repo.bzl", "rules_kotlin_repo")
 
-rules_kotlin_repo(
-    sha256 = "9cc0e4031bcb7e8508fd9569a81e7042bbf380604a0157f796d06d511cff2769",
-    version = "legacy-1.4.0-rc4",
-)
+rules_kotlin_repo()
 
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
+load("@wfa_common_jvm//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
 
-rules_kotlin_deps(compiler_release = kotlinc_release(
-    sha256 = "ccd0db87981f1c0e3f209a1a4acb6778f14e63fe3e561a98948b5317e526cc6c",
-    version = "1.3.72",
-))
+rules_kotlin_deps()
 
 # kotlinx.coroutines
-load("@wfa_measurement_system//build/kotlinx_coroutines:repo.bzl", "kotlinx_coroutines_artifact_dict")
+load("@wfa_common_jvm//build/kotlinx_coroutines:repo.bzl", "kotlinx_coroutines_artifact_dict")
 
 # @com_github_grpc_grpc_kotlin
 
@@ -112,7 +83,7 @@ http_archive(
 )
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
-load("@wfa_measurement_system//build/maven:artifacts.bzl", "artifacts")
+load("@wfa_common_jvm//build/maven:artifacts.bzl", "artifacts")
 
 MAVEN_ARTIFACTS = artifacts.list_to_dict(
     IO_GRPC_GRPC_JAVA_ARTIFACTS +
@@ -121,14 +92,14 @@ MAVEN_ARTIFACTS = artifacts.list_to_dict(
 
 MAVEN_ARTIFACTS.update(com_google_truth_artifact_dict(version = "1.0.1"))
 
-MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.3.6"))
+MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.4.3"))
 
 # Add Maven artifacts or override versions (e.g. those pulled in by gRPC Kotlin
 # or default dependency versions).
 MAVEN_ARTIFACTS.update({
-    "com.google.crypto.tink:tink": "1.6.0",
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
     "com.google.code.gson:gson": "2.8.6",
+    "com.google.crypto.tink:tink": "1.6.0",
     "com.google.guava:guava": "30.0-jre",
     "info.picocli:picocli": "4.4.0",
     "junit:junit": "4.13",
@@ -175,45 +146,6 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
 
-# @platforms
-
-http_archive(
-    name = "com_google_protobuf",
-    strip_prefix = "protobuf-3.15.6",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.15.6.tar.gz",
-    ],
-)
-
-# Measurement proto.
-http_archive(
-    name = "wfa_measurement_proto",
-    sha256 = "12f231fe7c8f75e3170ee9c6e308d355eccc354ed60ef4505f6f537812652626",
-    strip_prefix = "cross-media-measurement-api-584b40ca7b4275d194cc4cedfb877c05ec5ab24e",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/584b40ca7b4275d194cc4cedfb877c05ec5ab24e.tar.gz",
-)
-
-# @com_google_truth_truth
-load("@wfa_measurement_system//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
-
-# @io_bazel_rules_kotlin
-
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:repo.bzl", "kotlinc_release", "rules_kotlin_repo")
-
-rules_kotlin_repo(
-    sha256 = "9cc0e4031bcb7e8508fd9569a81e7042bbf380604a0157f796d06d511cff2769",
-    version = "legacy-1.4.0-rc4",
-)
-
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
-
-rules_kotlin_deps(compiler_release = kotlinc_release(
-    sha256 = "ccd0db87981f1c0e3f209a1a4acb6778f14e63fe3e561a98948b5317e526cc6c",
-    version = "1.3.72",
-))
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")  # From gRPC.
-
 # Google API protos
 http_archive(
     name = "com_google_googleapis",
@@ -228,4 +160,20 @@ load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_languag
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     java = True,
+)
+
+# Measurement proto.
+http_archive(
+    name = "wfa_measurement_proto",
+    sha256 = "12f231fe7c8f75e3170ee9c6e308d355eccc354ed60ef4505f6f537812652626",
+    strip_prefix = "cross-media-measurement-api-584b40ca7b4275d194cc4cedfb877c05ec5ab24e",
+    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/584b40ca7b4275d194cc4cedfb877c05ec5ab24e.tar.gz",
+)
+
+# Measurement system.
+http_archive(
+    name = "wfa_measurement_system",
+    sha256 = "2c3b011338d8e92e6cc1576911fc5afed8806f99eb4aea78a18efdbe721957b3",
+    strip_prefix = "cross-media-measurement-b01485411d036a1cef7fc0e6026de6c42eeb06da",
+    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement/archive/b01485411d036a1cef7fc0e6026de6c42eeb06da.tar.gz",
 )
