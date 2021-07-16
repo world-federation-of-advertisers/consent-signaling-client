@@ -1,6 +1,6 @@
 workspace(name = "consent_signaling_client")
 
-load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive", "http_file")
+load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 # @bazel_skylib
 
@@ -22,52 +22,29 @@ http_archive(
     ],
 )
 
+# Measurement system.
 http_archive(
-    name = "googletest",
-    sha256 = "94c634d499558a76fa649edb13721dce6e98fb1e7018dfaeba3cd7a083945e91",
-    strip_prefix = "googletest-release-1.10.0",
-    urls = ["https://github.com/google/googletest/archive/release-1.10.0.zip"],
-)
-
-# Abseil C++ libraries
-http_archive(
-    name = "com_google_absl",
-    sha256 = "dd7db6815204c2a62a2160e32c55e97113b0a0178b2f090d6bab5ce36111db4b",
-    strip_prefix = "abseil-cpp-20210324.0",
-    urls = [
-        "https://github.com/abseil/abseil-cpp/archive/refs/tags/20210324.0.tar.gz",
-    ],
+    name = "wfa_common_jvm",
+    sha256 = "b4f410343536bb11bb0a8a868e611be792e1cb0d493d329b9ad2fe4c4dbb7c35",
+    strip_prefix = "common-jvm-a2b9bae790fc84205499bed09bd1ac22e9cf7328",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/a2b9bae790fc84205499bed09bd1ac22e9cf7328.tar.gz",
 )
 
 # @com_google_truth_truth
-load("//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
-
-# Measurement system.
-http_archive(
-    name = "wfa_measurement_system",
-    sha256 = "d0200afef07d5a2c81adbe6c0c319a663e058195ad563401bfc4813bc4de6cb9",
-    strip_prefix = "cross-media-measurement-933284c02cff0be89991c31178bb9538de70f01b",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement/archive/933284c02cff0be89991c31178bb9538de70f01b.tar.gz",
-)
+load("@wfa_common_jvm//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
 
 # @io_bazel_rules_kotlin
 
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:repo.bzl", "kotlinc_release", "rules_kotlin_repo")
+load("@wfa_common_jvm//build/io_bazel_rules_kotlin:repo.bzl", "rules_kotlin_repo")
 
-rules_kotlin_repo(
-    sha256 = "9cc0e4031bcb7e8508fd9569a81e7042bbf380604a0157f796d06d511cff2769",
-    version = "legacy-1.4.0-rc4",
-)
+rules_kotlin_repo()
 
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
+load("@wfa_common_jvm//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
 
-rules_kotlin_deps(compiler_release = kotlinc_release(
-    sha256 = "ccd0db87981f1c0e3f209a1a4acb6778f14e63fe3e561a98948b5317e526cc6c",
-    version = "1.3.72",
-))
+rules_kotlin_deps()
 
 # kotlinx.coroutines
-load("@wfa_measurement_system//build/kotlinx_coroutines:repo.bzl", "kotlinx_coroutines_artifact_dict")
+load("@wfa_common_jvm//build/kotlinx_coroutines:repo.bzl", "kotlinx_coroutines_artifact_dict")
 
 # @com_github_grpc_grpc_kotlin
 
@@ -105,7 +82,7 @@ http_archive(
 )
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
-load("@wfa_measurement_system//build/maven:artifacts.bzl", "artifacts")
+load("@wfa_common_jvm//build/maven:artifacts.bzl", "artifacts")
 
 MAVEN_ARTIFACTS = artifacts.list_to_dict(
     IO_GRPC_GRPC_JAVA_ARTIFACTS +
@@ -114,7 +91,7 @@ MAVEN_ARTIFACTS = artifacts.list_to_dict(
 
 MAVEN_ARTIFACTS.update(com_google_truth_artifact_dict(version = "1.0.1"))
 
-MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.3.6"))
+MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.4.3"))
 
 # Add Maven artifacts or override versions (e.g. those pulled in by gRPC Kotlin
 # or default dependency versions).
@@ -122,7 +99,8 @@ MAVEN_ARTIFACTS.update({
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
     "com.google.code.gson:gson": "2.8.6",
     "com.google.guava:guava": "30.0-jre",
-    "com.nhaarman.mockitokotlin2:mockito-kotlin": "2.2.0",
+    "org.conscrypt:conscrypt-openjdk-uber": "2.5.2",
+    "org.mockito.kotlin:mockito-kotlin": "3.2.0",
     "info.picocli:picocli": "4.4.0",
     "junit:junit": "4.13",
 })
@@ -166,45 +144,6 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
 
-# @platforms
-
-http_archive(
-    name = "com_google_protobuf",
-    strip_prefix = "protobuf-3.15.6",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.15.6.tar.gz",
-    ],
-)
-
-# Measurement proto.
-http_archive(
-    name = "wfa_measurement_proto",
-    sha256 = "c7d87a438a446ebeacdcae8bcfed270c513ae5c5d26bccd36fb179d47e7d3365",
-    strip_prefix = "cross-media-measurement-api-ab647fffd78f29769611f05ef131ec1f1feed820",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/ab647fffd78f29769611f05ef131ec1f1feed820.tar.gz",
-)
-
-# @com_google_truth_truth
-load("@wfa_measurement_system//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
-
-# @io_bazel_rules_kotlin
-
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:repo.bzl", "kotlinc_release", "rules_kotlin_repo")
-
-rules_kotlin_repo(
-    sha256 = "9cc0e4031bcb7e8508fd9569a81e7042bbf380604a0157f796d06d511cff2769",
-    version = "legacy-1.4.0-rc4",
-)
-
-load("@wfa_measurement_system//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
-
-rules_kotlin_deps(compiler_release = kotlinc_release(
-    sha256 = "ccd0db87981f1c0e3f209a1a4acb6778f14e63fe3e561a98948b5317e526cc6c",
-    version = "1.3.72",
-))
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")  # From gRPC.
-
 # Google API protos
 http_archive(
     name = "com_google_googleapis",
@@ -219,4 +158,12 @@ load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_languag
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     java = True,
+)
+
+# Measurement proto.
+http_archive(
+    name = "wfa_measurement_proto",
+    sha256 = "c7d87a438a446ebeacdcae8bcfed270c513ae5c5d26bccd36fb179d47e7d3365",
+    strip_prefix = "cross-media-measurement-api-ab647fffd78f29769611f05ef131ec1f1feed820",
+    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/ab647fffd78f29769611f05ef131ec1f1feed820.tar.gz",
 )
