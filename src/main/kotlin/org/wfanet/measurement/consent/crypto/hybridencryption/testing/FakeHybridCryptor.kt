@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.hybridencryption
+package org.wfanet.measurement.consent.crypto.hybridencryption.testing
 
 import com.google.protobuf.ByteString
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
 
 /**

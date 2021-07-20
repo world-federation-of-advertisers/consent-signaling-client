@@ -24,8 +24,8 @@ import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.crypto.hash
-import org.wfanet.measurement.consent.crypto.hybridencryption.FakeHybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.FakeHybridCryptor
 import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
 
 class DuchyClientTest {

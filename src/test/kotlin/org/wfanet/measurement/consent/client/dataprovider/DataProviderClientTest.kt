@@ -28,8 +28,8 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.crypto.hash
-import org.wfanet.measurement.consent.crypto.hybridencryption.FakeHybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.FakeHybridCryptor
 import org.wfanet.measurement.consent.crypto.keys.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
@@ -71,7 +71,7 @@ class DataProviderClientTest {
         }
         .build()
     val dataProviderParticipation: SignedData =
-      indicateRequisitionParticipation(
+      createParticipationSignature(
         hybridCryptor = hybridCryptor,
         requisition = requisition,
         privateKeyHandle = privateKeyHandle,

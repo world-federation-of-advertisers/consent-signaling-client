@@ -15,6 +15,7 @@
 package org.wfanet.measurement.consent.crypto.hybridencryption
 
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.AbstractHybridCryptorTest
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.FakeHybridCryptor
 
 class FakeHybridCryptorTest : AbstractHybridCryptorTest() {
   override val hybridCryptor = FakeHybridCryptor()

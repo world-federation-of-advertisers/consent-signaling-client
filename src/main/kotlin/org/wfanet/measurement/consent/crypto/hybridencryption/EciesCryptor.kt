@@ -18,7 +18,10 @@ import com.google.protobuf.ByteString
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
 
-/** TODO [EciesCryptor] will be an implementation of [HybridCryptor] that uses ICIES */
+/**
+ * TODO [EciesCryptor] will be an implementation of [HybridCryptor] that uses ICIES See:
+ * https://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
+ */
 class EciesCryptor : HybridCryptor {
   override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteString): ByteString {
     TODO("Not yet implemented")

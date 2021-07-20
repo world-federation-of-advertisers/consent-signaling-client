@@ -31,7 +31,7 @@ import org.wfanet.measurement.consent.crypto.sign
  * the encrypted RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
  * 2. Signs the RequisitionFingerprint resulting in the participationSignature
  */
-fun indicateRequisitionParticipation(
+fun createParticipationSignature(
   hybridCryptor: HybridCryptor,
   requisition: Requisition,
   privateKeyHandle: PrivateKeyHandle,
