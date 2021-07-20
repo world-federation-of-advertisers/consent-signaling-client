@@ -52,7 +52,8 @@ class DuchyClientTest {
     ByteString.copyFrom(
       Base64.getDecoder()
         .decode(
-          "MEQCIG1JP7aetpszI7hgwmrhnXccTlDBseR67CKSiOqsjqMBAiBk2eRj+HdBiJXROxYYot1htWfXzu2/FtdtMP2bwiMWAw=="
+          "MEQCIG1JP7aetpszI7hgwmrhnXccTlDBseR67CKSiOqsjqMBAiBk2eRj+HdBiJXROxYYot1htWfXzu" +
+            "2/FtdtMP2bwiMWAw=="
         )
     )
 
