@@ -15,6 +15,7 @@
 package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Base64
 import kotlin.test.assertTrue
@@ -22,11 +23,19 @@ import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
+import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
+import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.crypto.hash
 import org.wfanet.measurement.consent.crypto.hybridencryption.FakeHybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.keys.InMemoryKeyStore
+import org.wfanet.measurement.consent.crypto.verifySignature
+import org.wfanet.measurement.consent.testing.DUCHY1_NON_AGG_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.DUCHY1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
 
 class DuchyClientTest {
 
@@ -36,6 +45,7 @@ class DuchyClientTest {
   val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
   val someSerializedDataProviderList = ByteString.copyFromUtf8("some-data-provider-list")
   val dataProviderX509: X509Certificate = readCertificate(EDP1_CERT_PEM_FILE)
+  val duchy1NonAggX509: X509Certificate = readCertificate(DUCHY1_NON_AGG_CERT_PEM_FILE)
   val someRequisitionSpec =
     RequisitionSpec.newBuilder()
       .also {
@@ -49,18 +59,25 @@ class DuchyClientTest {
   // There is no salt when hashing the encrypted requisition spec
   val someRequisitionSpecHash = hash(someEncryptedRequisitionSpec)
   val someSerializedMeasurementSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
-  val dataProviderSignature =
-    ByteString.copyFrom(
-      Base64.getDecoder()
-        .decode(
-          "MEUCIQCezffjEDL72/YwtOCKdm2vxmPpQfyT/ShYw17BomoEGgIgRBN0ZVZiVNKHCOJXWnii4UEEK" +
-            "gesMd1TNfmaCjBYjdo="
-        )
+  val keyStore = InMemoryKeyStore()
+  val privateKeyHandleKey = "some arbitrary key"
+  val duchyPrivateKey: PrivateKey = readPrivateKey(DUCHY1_NON_AGG_KEY_FILE, KEY_ALGORITHM)
+  val privateKeyHandle =
+    keyStore.storePrivateKeyDer(
+      privateKeyHandleKey,
+      ByteString.copyFrom(duchyPrivateKey.getEncoded())
     )
 
   @Test
   fun `duchy verify edp participation signature`() {
-
+    val dataProviderSignature =
+      ByteString.copyFrom(
+        Base64.getDecoder()
+          .decode(
+            "MEUCIQCezffjEDL72/YwtOCKdm2vxmPpQfyT/ShYw17BomoEGgIgRBN0ZVZiVNKHCOJXWnii4UEEK" +
+              "gesMd1TNfmaCjBYjdo="
+          )
+      )
     /** Items already known to the duchy */
     val computation =
       Computation(
@@ -82,5 +99,24 @@ class DuchyClientTest {
         requisition = requisition
       )
     )
+  }
+
+  @Test
+  fun `duchy sign and encrypt result`() {
+    val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
+    val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
+    val someMeasurementResult = ByteString.copyFromUtf8("some-measurement-result")
+    val signedAndEncryptedResult =
+      signAndEncryptResult(
+        hybridCryptor = hybridCryptor,
+        measurementResult = someMeasurementResult,
+        privateKeyHandle = privateKeyHandle,
+        aggregatorCertificate = ByteString.copyFrom(aggregatorX509.getEncoded()),
+        measurementPublicKey = measurementPublicKey
+      )
+    // TODO add real encryption
+    val decryptedSignedResult =
+      SignedData.parseFrom(hybridCryptor.decrypt(privateKeyHandle, signedAndEncryptedResult))
+    assertTrue(duchy1NonAggX509.verifySignature(decryptedSignedResult))
   }
 }

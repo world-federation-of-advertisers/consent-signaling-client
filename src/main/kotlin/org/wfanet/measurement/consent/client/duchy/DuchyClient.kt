@@ -15,9 +15,15 @@
 package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.crypto.hash
+import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
+import org.wfanet.measurement.consent.crypto.sign
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 data class Computation(
@@ -61,4 +67,28 @@ fun verifyDataProviderParticipation(
     requisitionFingerprint,
     dataProviderParticipationSignature
   )
+}
+
+/**
+ * Sign and encrypts the [measurementResult] into a serialized [SignedData] ProtoBuf. The
+ * [aggregatorCertificate] is required to determine the algorithm type of the signature
+ */
+fun signAndEncryptResult(
+  hybridCryptor: HybridCryptor,
+  measurementResult: ByteString,
+  privateKeyHandle: PrivateKeyHandle,
+  aggregatorCertificate: ByteString,
+  measurementPublicKey: EncryptionPublicKey
+): ByteString {
+  val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey("EC"))
+  val measurementSignature =
+    privateKey.sign(certificate = readCertificate(aggregatorCertificate), data = measurementResult)
+  val signedData =
+    SignedData.newBuilder()
+      .also {
+        it.data = measurementResult
+        it.signature = measurementSignature
+      }
+      .build()
+  return hybridCryptor.encrypt(measurementPublicKey, ByteString.copyFrom(signedData.toByteArray()))
 }

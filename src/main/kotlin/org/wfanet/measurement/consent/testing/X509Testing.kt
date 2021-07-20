@@ -41,3 +41,12 @@ val EDP1_CERT_PEM_FILE = getRuntimePath(TESTDATA_DIR.resolve("edp-1.pem"))!!.toF
 val EDP1_KEY_FILE = getRuntimePath(TESTDATA_DIR.resolve("edp-1.key"))!!.toFile()
 val EDP1_DER_FILE = getRuntimePath(TESTDATA_DIR.resolve("edp-1.der"))!!.toFile()
 val EDP1_PRIVATE_KEY_FILE = getRuntimePath(TESTDATA_DIR.resolve("edp-1-private.key"))!!.toFile()
+
+val DUCHY1_NON_AGG_CERT_PEM_FILE =
+  getRuntimePath(TESTDATA_DIR.resolve("duchy-non-aggregator-1.pem"))!!.toFile()
+val DUCHY1_NON_AGG_KEY_FILE =
+  getRuntimePath(TESTDATA_DIR.resolve("duchy-non-aggregator-1.key"))!!.toFile()
+
+val DUCHY_AGG_CERT_PEM_FILE =
+  getRuntimePath(TESTDATA_DIR.resolve("duchy-aggregator.pem"))!!.toFile()
+val DUCHY_AGG_KEY_FILE = getRuntimePath(TESTDATA_DIR.resolve("duchy-aggregator.key"))!!.toFile()
