@@ -18,6 +18,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.util.Base64
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
@@ -74,12 +75,12 @@ class DataProviderClientTest {
         hybridCryptor = hybridCryptor,
         requisition = requisition,
         privateKeyHandle = privateKeyHandle,
-        dataProviderListSalt = someDataProviderListSalt,
         dataProviderX509 = ByteString.copyFrom(dataProviderX509.getEncoded())
       )
-    assertThat(dataProviderParticipation.data.toByteArray().joinToString())
+    assertThat(Base64.getEncoder().encodeToString(dataProviderParticipation.data.toByteArray()))
       .isEqualTo(
-        "5, 0, 64, 63, 17, 14, 102, -93, -34, -104, 89, 117, -96, -106, 23, 101, 2, -95, 43, 106, 14, -100, 32, 21, -9, 123, -101, -4, 38, -87, 85, -101, 82, 79, 20, 13, -75, -80, 42, -5, -72, -109, -115, -52, 64, 70, -84, 57, -102, 7, 68, 94, -33, -83, 28, -118, -125, 22, -110, -50, 98, 90, -93, -60, 115, 111, 109, 101, 45, 115, 101, 114, 105, 97, 108, 105, 122, 101, 100, 45, 109, 101, 97, 115, 117, 114, 101, 109, 101, 110, 116, 45, 115, 112, 101, 99"
+        "0FDiZZy02niAX0VmTcjpPbm4iiG/2xLJj2H8StnCF3xSTxQNtbAq+7iTjcxARqw5mgdEXt+tHIqDFpLOYlq" +
+          "jxHNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
       )
     assertTrue(dataProviderX509.verifySignature(dataProviderParticipation))
   }

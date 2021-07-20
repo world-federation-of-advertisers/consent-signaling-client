@@ -35,14 +35,13 @@ fun indicateRequisitionParticipation(
   hybridCryptor: HybridCryptor,
   requisition: Requisition,
   privateKeyHandle: PrivateKeyHandle,
-  dataProviderListSalt: ByteString,
   dataProviderX509: ByteString
 ): SignedData {
   val encryptedRequisitionSpec = requisition.encryptedRequisitionSpec
   val requisitionSpec =
     RequisitionSpec.parseFrom(hybridCryptor.decrypt(privateKeyHandle, encryptedRequisitionSpec))
-  val hashedEncryptedRequisitionSpec: ByteString =
-    hash(encryptedRequisitionSpec, dataProviderListSalt)
+  // There is no salt when hashing the encrypted requisition spec
+  val hashedEncryptedRequisitionSpec: ByteString = hash(encryptedRequisitionSpec)
   val requisitionFingerprint =
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
@@ -51,10 +50,6 @@ fun indicateRequisitionParticipation(
        * received by the data provider.
        */
       .concat(requireNotNull(requisition.measurementSpec.data))
-  print("1:${hashedEncryptedRequisitionSpec.joinToString()}\n")
-  print("2:${requisitionSpec.dataProviderListHash.joinToString()}\n")
-  print("3:${requisition.measurementSpec.data.joinToString()}\n")
-  print("4:${requisitionFingerprint.joinToString()}\n")
   val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey("EC"))
   val participationSignature =
     privateKey.sign(certificate = readCertificate(dataProviderX509), data = requisitionFingerprint)

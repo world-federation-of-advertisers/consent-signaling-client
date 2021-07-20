@@ -14,6 +14,6 @@ kt_jvm_library(
 
 kt_jvm_library(
     name = "hash",
-    srcs = glob(["Hashing.kt"]),
+    srcs = ["Hashing.kt"],
     deps = ["@wfa_common_jvm//imports/java/com/google/protobuf"],
 )

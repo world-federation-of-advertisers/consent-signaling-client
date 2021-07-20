@@ -16,7 +16,6 @@ package org.wfanet.measurement.consent.crypto.keys
 import com.google.crypto.tink.KeysetHandle
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
-import java.security.spec.PKCS8EncodedKeySpec
 import org.wfanet.measurement.common.crypto.readPrivateKey
 
 /**
@@ -45,7 +44,6 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
   fun toJavaPrivateKey(alg: String): PrivateKey? {
     val internalPrivateKey = toByteString()
     internalPrivateKey?.let {
-      print("InternalPrivateKey: ${PKCS8EncodedKeySpec(internalPrivateKey.toByteArray())}")
       return readPrivateKey(internalPrivateKey, alg)
     }
     return null

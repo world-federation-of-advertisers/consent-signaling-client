@@ -25,3 +25,9 @@ fun hash(data: ByteString, salt: ByteString): ByteString {
   sha256MessageDigest.update(salt.toByteArray())
   return ByteString.copyFrom(sha256MessageDigest.digest(data.toByteArray()))
 }
+
+/** Generates a SHA-256 of [data] without a [salt] */
+fun hash(data: ByteString): ByteString {
+  val sha256MessageDigest = MessageDigest.getInstance(HASH_ALGORITHM)
+  return ByteString.copyFrom(sha256MessageDigest.digest(data.toByteArray()))
+}

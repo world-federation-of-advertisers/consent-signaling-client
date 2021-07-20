@@ -16,7 +16,7 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.Base64
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
@@ -46,13 +46,15 @@ class DuchyClientTest {
       .toByteString()
   val someEncryptedRequisitionSpec =
     hybridCryptor.encrypt(dataProviderPublicKey, someRequisitionSpec)
-  val someRequisitionSpecHash = hash(someEncryptedRequisitionSpec, someDataProviderListSalt)
+  // There is no salt when hashing the encrypted requisition spec
+  val someRequisitionSpecHash = hash(someEncryptedRequisitionSpec)
   val someSerializedMeasurementSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
   val dataProviderSignature =
     ByteString.copyFrom(
       Base64.getDecoder()
         .decode(
-          "MEQCIG1JP7aetpszI7hgwmrhnXccTlDBseR67CKSiOqsjqMBAiBk2eRj+HdBiJXROxYYot1htWfXzu2/FtdtMP2bwiMWAw=="
+          "MEUCIQCezffjEDL72/YwtOCKdm2vxmPpQfyT/ShYw17BomoEGgIgRBN0ZVZiVNKHCOJXWnii4UEEK" +
+            "gesMd1TNfmaCjBYjdo="
         )
     )
 
