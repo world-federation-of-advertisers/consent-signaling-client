@@ -25,11 +25,13 @@ http_archive(
 # Measurement system.
 http_archive(
     name = "wfa_common_jvm",
-    strip_prefix = "common-jvm-a2b9bae790fc84205499bed09bd1ac22e9cf7328",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/a2b9bae790fc84205499bed09bd1ac22e9cf7328.tar.gz",
+    sha256 = "c7d00a5b8e68d947e2998570c9005ab331cf7d298e188b2451500fbaae3bd2ca",
+    strip_prefix = "common-jvm-01c3c5c0de76b864bcdb229138b5bdeda6ae50de",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/01c3c5c0de76b864bcdb229138b5bdeda6ae50de.tar.gz",
 )
 
 # @com_google_truth_truth
+
 load("@wfa_common_jvm//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
 
 # @io_bazel_rules_kotlin
@@ -95,9 +97,9 @@ MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.4.3"))
 # Add Maven artifacts or override versions (e.g. those pulled in by gRPC Kotlin
 # or default dependency versions).
 MAVEN_ARTIFACTS.update({
-    "com.google.crypto.tink:tink": "1.6.0",
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
     "com.google.code.gson:gson": "2.8.6",
+    "com.google.crypto.tink:tink": "1.6.0",
     "com.google.guava:guava": "30.0-jre",
     "info.picocli:picocli": "4.4.0",
     "junit:junit": "4.13",
@@ -144,26 +146,6 @@ load("@com_github_grpc_grpc//bazel:grpc_extra_deps.bzl", "grpc_extra_deps")
 
 grpc_extra_deps()
 
-# @platforms
-http_archive(
-    name = "com_google_protobuf",
-    strip_prefix = "protobuf-3.15.6",
-    urls = [
-        "https://github.com/protocolbuffers/protobuf/archive/refs/tags/v3.15.6.tar.gz",
-    ],
-)
-
-# @com_google_truth_truth
-load("@wfa_common_jvm//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
-
-# @io_bazel_rules_kotlin
-load("@wfa_common_jvm//build/io_bazel_rules_kotlin:repo.bzl", "rules_kotlin_repo")
-
-load("@wfa_common_jvm//build/io_bazel_rules_kotlin:deps.bzl", "rules_kotlin_deps")
-
-load("@com_google_protobuf//:protobuf_deps.bzl", "protobuf_deps")  # From gRPC.
-
-
 # Google API protos
 http_archive(
     name = "com_google_googleapis",
@@ -178,14 +160,6 @@ load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_languag
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     java = True,
-)
-
-# Measurement system.
-http_archive(
-    name = "wfa_measurement_system",
-    sha256 = "d0200afef07d5a2c81adbe6c0c319a663e058195ad563401bfc4813bc4de6cb9",
-    strip_prefix = "cross-media-measurement-933284c02cff0be89991c31178bb9538de70f01b",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement/archive/933284c02cff0be89991c31178bb9538de70f01b.tar.gz",
 )
 
 # Measurement proto.

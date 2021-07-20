@@ -3,10 +3,10 @@ load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_test")
 kt_jvm_test(
     name = "SignaturesTest",
     srcs = ["SignaturesTest.kt"],
-    data = ["@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing/testdata:certs"],
     test_class = "org.wfanet.measurement.consent.crypto.SignaturesTest",
     deps = [
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
+        "//src/main/kotlin/org/wfanet/measurement/consent/testing",
         "@wfa_common_jvm//imports/java/com/google/common/truth",
         "@wfa_common_jvm//imports/java/org/junit",
         "@wfa_common_jvm//imports/kotlin/kotlin/test",

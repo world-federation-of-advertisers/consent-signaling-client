@@ -17,7 +17,6 @@ package org.wfanet.measurement.consent.crypto
 import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
-import java.nio.file.Paths
 import java.security.cert.X509Certificate
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -26,25 +25,12 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
-import org.wfanet.measurement.common.getRuntimePath
+import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
+import org.wfanet.measurement.consent.testing.SERVER_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.SERVER_KEY_FILE
 
-private const val KEY_ALGORITHM = "EC"
 private val DATA = ByteString.copyFromUtf8("I am some data to sign")
 private val ALT_DATA = ByteString.copyFromUtf8("I am some alternative data")
-private val TESTDATA_DIR =
-  Paths.get(
-    "wfa_common_jvm",
-    "src",
-    "main",
-    "kotlin",
-    "org",
-    "wfanet",
-    "measurement",
-    "common",
-    "crypto",
-    "testing",
-    "testdata"
-  )
 
 @RunWith(JUnit4::class)
 class SignaturesTest {
@@ -75,10 +61,5 @@ class SignaturesTest {
     val signature = privateKey.sign(certificate, DATA)
 
     assertFalse(certificate.verifySignature(ALT_DATA, signature))
-  }
-
-  companion object {
-    private val SERVER_CERT_PEM_FILE = getRuntimePath(TESTDATA_DIR.resolve("server.pem"))!!.toFile()
-    private val SERVER_KEY_FILE = getRuntimePath(TESTDATA_DIR.resolve("server.key"))!!.toFile()
   }
 }

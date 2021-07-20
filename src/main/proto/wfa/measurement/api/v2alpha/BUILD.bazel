@@ -10,7 +10,7 @@ java_proto_library(
 )
 
 java_proto_library(
-    name = "measurement_java_proto",
+    name = "measurementv2_java_proto",
     deps = [
         "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto",
     ],
@@ -24,8 +24,22 @@ java_proto_library(
 )
 
 java_proto_library(
-    name = "measurement_spec_java_proto",
+    name = "requisition_spec_java_proto",
     deps = [
-        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_proto",
+        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:requisition_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "requisition_java_proto",
+    deps = [
+        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:requisition_proto",
+    ],
+)
+
+java_proto_library(
+    name = "measurement_java_proto",
+    deps = [
+        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto",
     ],
 )
