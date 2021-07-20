@@ -25,9 +25,9 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
-import org.wfanet.measurement.consent.testing.SERVER_CERT_PEM_FILE
-import org.wfanet.measurement.consent.testing.SERVER_KEY_FILE
 
 private val DATA = ByteString.copyFromUtf8("I am some data to sign")
 private val ALT_DATA = ByteString.copyFromUtf8("I am some alternative data")
@@ -36,8 +36,8 @@ private val ALT_DATA = ByteString.copyFromUtf8("I am some alternative data")
 class SignaturesTest {
   @Test
   fun `sign returns signature of correct size`() {
-    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
-    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val privateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
 
     val signature = privateKey.sign(certificate, DATA)
 
@@ -47,8 +47,8 @@ class SignaturesTest {
 
   @Test
   fun `verifySignature returns true for valid signature`() {
-    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
-    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val privateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
     val signature = privateKey.sign(certificate, DATA)
 
     assertTrue(certificate.verifySignature(DATA, signature))
@@ -56,8 +56,8 @@ class SignaturesTest {
 
   @Test
   fun `verifySignature returns false for signature from different data`() {
-    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
-    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val privateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
     val signature = privateKey.sign(certificate, DATA)
 
     assertFalse(certificate.verifySignature(ALT_DATA, signature))

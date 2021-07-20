@@ -31,10 +31,11 @@ import org.wfanet.measurement.consent.crypto.hybridencryption.FakeHybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keys.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.verifySignature
-import org.wfanet.measurement.consent.testing.DUCHY1_NON_AGG_CERT_PEM_FILE
-import org.wfanet.measurement.consent.testing.DUCHY1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
-import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
+// We use a fixed certificate so we can verify the signature against a known certificate
+import org.wfanet.measurement.consent.testing.FIXED_CERT_PEM_FILE as EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
 
 class DuchyClientTest {
@@ -44,8 +45,8 @@ class DuchyClientTest {
   val dataProviderPublicKey = EncryptionPublicKey.getDefaultInstance()
   val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
   val someSerializedDataProviderList = ByteString.copyFromUtf8("some-data-provider-list")
-  val dataProviderX509: X509Certificate = readCertificate(EDP1_CERT_PEM_FILE)
-  val duchy1NonAggX509: X509Certificate = readCertificate(DUCHY1_NON_AGG_CERT_PEM_FILE)
+  val dataProviderX509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+  val duchy1NonAggX509: X509Certificate = readCertificate(DUCHY_1_NON_AGG_CERT_PEM_FILE)
   val someRequisitionSpec =
     RequisitionSpec.newBuilder()
       .also {
@@ -61,7 +62,7 @@ class DuchyClientTest {
   val someSerializedMeasurementSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
   val keyStore = InMemoryKeyStore()
   val privateKeyHandleKey = "some arbitrary key"
-  val duchyPrivateKey: PrivateKey = readPrivateKey(DUCHY1_NON_AGG_KEY_FILE, KEY_ALGORITHM)
+  val duchyPrivateKey: PrivateKey = readPrivateKey(DUCHY_1_NON_AGG_KEY_FILE, KEY_ALGORITHM)
   val privateKeyHandle =
     keyStore.storePrivateKeyDer(
       privateKeyHandleKey,
@@ -70,12 +71,13 @@ class DuchyClientTest {
 
   @Test
   fun `duchy verify edp participation signature`() {
+    // This is pre-calculated using a fixed certificate from common-jvm
     val dataProviderSignature =
       ByteString.copyFrom(
         Base64.getDecoder()
           .decode(
-            "MEUCIQCezffjEDL72/YwtOCKdm2vxmPpQfyT/ShYw17BomoEGgIgRBN0ZVZiVNKHCOJXWnii4UEEK" +
-              "gesMd1TNfmaCjBYjdo="
+            "MEQCIHs37Y61C0kPM/BiiPTU5+rDLG6NpInfQ5OZ+EG1GHUDAiAnplieJkMve3gVvRHY65cQ1vD3" +
+              "ZO2bZiiPR4LSqTPFkQ=="
           )
       )
     /** Items already known to the duchy */

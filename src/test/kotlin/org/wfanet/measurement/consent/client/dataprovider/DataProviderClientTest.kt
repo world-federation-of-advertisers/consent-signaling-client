@@ -32,15 +32,15 @@ import org.wfanet.measurement.consent.crypto.hybridencryption.FakeHybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keys.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.verifySignature
-import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
-import org.wfanet.measurement.consent.testing.EDP1_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
 
 class DataProviderClientTest {
   val hybridCryptor: HybridCryptor = FakeHybridCryptor()
   val publicKey = EncryptionPublicKey.getDefaultInstance()
-  val dataProviderX509: X509Certificate = readCertificate(EDP1_CERT_PEM_FILE)
-  val dataProviderPrivateKey: PrivateKey = readPrivateKey(EDP1_KEY_FILE, KEY_ALGORITHM)
+  val dataProviderX509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+  val dataProviderPrivateKey: PrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
   val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
   val someRequisitionSpec =
     RequisitionSpec.newBuilder()
