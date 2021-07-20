@@ -16,7 +16,7 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import java.util.*
+import java.util.Base64
 import kotlin.test.assertTrue
 import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey

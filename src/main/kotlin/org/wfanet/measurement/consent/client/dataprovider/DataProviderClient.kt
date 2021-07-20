@@ -51,10 +51,6 @@ fun indicateRequisitionParticipation(
        * received by the data provider.
        */
       .concat(requireNotNull(requisition.measurementSpec.data))
-  print("1:${hashedEncryptedRequisitionSpec.joinToString()}\n")
-  print("2:${requisitionSpec.dataProviderListHash.joinToString()}\n")
-  print("3:${requisition.measurementSpec.data.joinToString()}\n")
-  print("4:${requisitionFingerprint.joinToString()}\n")
   val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey("EC"))
   val participationSignature =
     privateKey.sign(certificate = readCertificate(dataProviderX509), data = requisitionFingerprint)

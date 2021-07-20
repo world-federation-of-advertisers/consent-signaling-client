@@ -54,13 +54,9 @@ fun verifyDataProviderParticipation(
   val dataProviderX509: X509Certificate = readCertificate(requisition.dataProviderCertificate)
 
   /**
-   * TODO Verify the dataProviderSignature has not been previously reused to protect against TODO
-   * replay attacks
+   * TODO Verify the dataProviderSignature has not been previously reused to protect against replay
+   * attacks
    */
-  print("1:${requisition.requisitionSpecHash.joinToString()}\n")
-  print("2:${hashedParticipantList.joinToString()}\n")
-  print("3:${computation.measurementSpec.joinToString()}\n")
-  print("4:${requisitionFingerprint.joinToString()}\n")
   return dataProviderX509.verifySignature(
     requisitionFingerprint,
     dataProviderParticipationSignature
