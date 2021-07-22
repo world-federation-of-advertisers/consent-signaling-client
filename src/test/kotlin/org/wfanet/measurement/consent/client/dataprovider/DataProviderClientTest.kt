@@ -37,39 +37,40 @@ import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 
+private val PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+private val DATA_PROVIDER_PRIVATE_KEY: PrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
+private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
+private val SOME_REQUISITION_SPEC =
+  RequisitionSpec.newBuilder()
+    .apply {
+      dataProviderListHash =
+        hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), SOME_DATA_PROVIDER_LIST_SALT)
+    }
+    .build()
+    .toByteString()
+private val SOME_SERIALIZED_MEASUREMENT_SPEC =
+  ByteString.copyFromUtf8("some-serialized-measurement-spec")
+private val PRIVATE_KEY_HANDLE = "some arbitrary key"
+
 class DataProviderClientTest {
   val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-  val publicKey = EncryptionPublicKey.getDefaultInstance()
-  val dataProviderX509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
-  val dataProviderPrivateKey: PrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
-  val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
-  val someRequisitionSpec =
-    RequisitionSpec.newBuilder()
-      .apply {
-        dataProviderListHash =
-          hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), someDataProviderListSalt)
-      }
-      .build()
-      .toByteString()
-  val someEncryptedRequisitionSpec = hybridCryptor.encrypt(publicKey, someRequisitionSpec)
-  val someSerializedMeasurmentSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
+  val someEncryptedRequisitionSpec = hybridCryptor.encrypt(PUBLIC_KEY, SOME_REQUISITION_SPEC)
   val keyStore = InMemoryKeyStore()
-  val privateKeyHandleKey = "some arbitrary key"
 
   @Test
-  fun `data provider indicate requisition participation`() = runBlocking {
-    print("XXXX:${System.getenv("TEST_WORKSPACE")}")
+  fun `data provider calculates requisition participation signature`() = runBlocking {
     val privateKeyHandle =
       keyStore.storePrivateKeyDer(
-        privateKeyHandleKey,
-        ByteString.copyFrom(dataProviderPrivateKey.getEncoded())
+        PRIVATE_KEY_HANDLE,
+        ByteString.copyFrom(DATA_PROVIDER_PRIVATE_KEY.getEncoded())
       )
     val requisition =
       Requisition.newBuilder()
         .apply {
           encryptedRequisitionSpec = someEncryptedRequisitionSpec
           measurementSpec =
-            SignedData.newBuilder().apply { data = someSerializedMeasurmentSpec }.build()
+            SignedData.newBuilder().apply { data = SOME_SERIALIZED_MEASUREMENT_SPEC }.build()
         }
         .build()
     val dataProviderParticipation: SignedData =
@@ -77,13 +78,13 @@ class DataProviderClientTest {
         hybridCryptor = hybridCryptor,
         requisition = requisition,
         privateKeyHandle = privateKeyHandle,
-        dataProviderX509 = ByteString.copyFrom(dataProviderX509.getEncoded())
+        dataProviderX509 = ByteString.copyFrom(DATA_PROVIDER_X509.getEncoded())
       )
     assertThat(Base64.getEncoder().encodeToString(dataProviderParticipation.data.toByteArray()))
       .isEqualTo(
         "0FDiZZy02niAX0VmTcjpPbm4iiG/2xLJj2H8StnCF3xSTxQNtbAq+7iTjcxARqw5mgdEXt+tHIqDFpLOYlq" +
           "jxHNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
       )
-    assertTrue(dataProviderX509.verifySignature(dataProviderParticipation))
+    assertTrue(DATA_PROVIDER_X509.verifySignature(dataProviderParticipation))
   }
 }

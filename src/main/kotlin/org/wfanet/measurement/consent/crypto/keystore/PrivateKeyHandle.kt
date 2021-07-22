@@ -20,19 +20,13 @@ import java.security.cert.X509Certificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 
 /**
- * [PrivateKeyHandle] can only be created inside of this 'crypto' module. The allow a client to have
- * a handle to a private key, yet are not able to gain access to the contents of the private key.
- * Only the 'crypto' module can read the bytes of the private key.
- *
- * Convenience methods of [toTinkKeysetHandle] and [toJavaPrivateKey] are included and used by
- * various parts of the 'crypto' library
+ * Clients should only know a handle to a private key, not the actual contents of the private key.
+ * Therefore, only this library should read the bytes of the private key.
  */
 class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStore) {
 
   /**
    * Converts the [PrivateKeyHandle] into a usable [TinkKeysetHandle] object (used by TinkCrypto)
-   *
-   * 'crypto' module internal use only
    */
   internal suspend fun toTinkKeysetHandle(): KeysetHandle {
     TODO("Not yet implemented")
@@ -50,11 +44,7 @@ class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStor
     return null
   }
 
-  /**
-   * Returns the private key to a [PrivateKey]
-   *
-   * 'crypto' module internal use only
-   */
+  /** @return [ByteString] of the private key */
   internal suspend fun toByteString(): ByteString? {
     return keyStore.readPrivateKey(this)
   }

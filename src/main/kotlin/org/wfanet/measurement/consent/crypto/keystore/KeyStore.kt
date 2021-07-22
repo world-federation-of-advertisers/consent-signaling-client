@@ -21,8 +21,7 @@ import com.google.protobuf.ByteString
  *
  * Clients of this class can store [PrivateKeyBytes] (currently in DER format) and can retrieve a
  * [PrivateKeyHandle] of the stored key, however the client will not be enable to read the actual
- * key contents stored in KMS. Only this 'crypto' module will have access to the actual private key
- * contents (currently used by signage and crypto classes)
+ * key contents stored in KMS.
  */
 abstract class KeyStore {
 
@@ -34,17 +33,18 @@ abstract class KeyStore {
   abstract suspend fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
   /**
-   * Accesses a [PrivateKeyHandle] via an existing key in [KeyStore].
+   * Accesses an existing private key handle specified by [id].
    *
-   * @return `null` if not present.
+   * @return [PrivateKeyHandle] for the key or `null` if not found.
    */
   abstract suspend fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
 
   /**
-   * Can only be access by this 'crypto' module. Accesses contents of a private key stored in inside
-   * the [PrivateKeyHandle].
+   * Accesses an existing private key specified by [privateKeyHandle]. Should only be accessed by
+   * this 'crypto' module.
    *
-   * @return `null` if not present.
+   * @return [ByteString] of the private key for a specified [privateKeyHandle] or `null` if not
+   * present.
    */
   abstract suspend fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
 }

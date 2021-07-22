@@ -18,6 +18,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.wfanet.measurement.common.crypto.readCertificate
@@ -29,12 +30,13 @@ import org.wfanet.measurement.consent.crypto.keystore.KeyStore
 
 private const val KEY = "some arbitrary key"
 private val VALUE = ByteString.copyFromUtf8("some arbitrary value")
+private val OTHER_VALUE = ByteString.copyFromUtf8("some other arbitrary value")
 
 abstract class AbstractKeyStoreTest {
   abstract val keyStore: KeyStore
 
   @Test
-  fun `write key and read privateKeyHandle to KeyStore`() =
+  fun `getPrivateKeyHandle returns handle for existing key`() =
     runBlocking<Unit> {
       val privateKeyHandle1 = keyStore.storePrivateKeyDer(KEY, VALUE)
       val privateKeyHandle2 = keyStore.getPrivateKeyHandle(KEY)
@@ -42,13 +44,22 @@ abstract class AbstractKeyStoreTest {
     }
 
   @Test
-  fun `get null for invalid key from KeyStore`() = runBlocking {
+  fun `storePrivateKeyDer returns error for existing key`() =
+    runBlocking<Unit> {
+      keyStore.storePrivateKeyDer(KEY, VALUE)
+      assertFailsWith(IllegalArgumentException::class) {
+        keyStore.storePrivateKeyDer(KEY, OTHER_VALUE)
+      }
+    }
+
+  @Test
+  fun `getPrivateKeyHandle returns null when key is not found`() = runBlocking {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(KEY)
     assertThat(privateKeyHandle).isEqualTo(null)
   }
 
   @Test
-  fun `store and retrieve java security PrivateKey`() = runBlocking {
+  fun `toJavaPrivateKey returns existing private key`() = runBlocking {
     val privateKey: PrivateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
     keyStore.storePrivateKeyDer(KEY, ByteString.copyFrom(privateKey.getEncoded()))
     val privateKeyHandle = requireNotNull(keyStore.getPrivateKeyHandle(KEY))

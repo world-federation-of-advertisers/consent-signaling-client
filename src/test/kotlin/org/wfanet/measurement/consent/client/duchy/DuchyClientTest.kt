@@ -28,58 +28,60 @@ import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 
+// TODO Switch this to real cryptography
+private val DATA_PROVIDER_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
+private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
+// We use a fixed certificate so we can verify the signature against a known certificate
+private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+private val SOME_REQUISITION_SPEC =
+  RequisitionSpec.newBuilder()
+    .apply {
+      dataProviderListHash =
+        hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), SOME_DATA_PROVIDER_LIST_SALT)
+    }
+    .build()
+    .toByteString()
+private val SOME_SERIALIZED_MEASUREMENT_SPEC =
+  ByteString.copyFromUtf8("some-serialized-measurement-spec")
+/** This is pre-calculated using a fixed certificate from common-jvm. */
+val DATA_PROVIDER_SIGNATURE =
+  ByteString.copyFrom(
+    Base64.getDecoder()
+      .decode(
+        "MEQCIHs37Y61C0kPM/BiiPTU5+rDLG6NpInfQ5OZ+EG1GHUDAiAnplieJkMve3gVvRHY65cQ1vD3" +
+          "ZO2bZiiPR4LSqTPFkQ=="
+      )
+  )
+
 class DuchyClientTest {
 
   val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-  // TODO Switch this to real cryptography
-  val dataProviderPublicKey = EncryptionPublicKey.getDefaultInstance()
-  val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
-  val someSerializedDataProviderList = ByteString.copyFromUtf8("some-data-provider-list")
-  // We use a fixed certificate so we can verify the signature against a known certificate
-  val dataProviderX509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
-  val someRequisitionSpec =
-    RequisitionSpec.newBuilder()
-      .apply {
-        dataProviderListHash =
-          hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), someDataProviderListSalt)
-      }
-      .build()
-      .toByteString()
   val someEncryptedRequisitionSpec =
-    hybridCryptor.encrypt(dataProviderPublicKey, someRequisitionSpec)
+    hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, SOME_REQUISITION_SPEC)
   // There is no salt when hashing the encrypted requisition spec
   val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
-  val someSerializedMeasurementSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
-  // This is pre-calculated using a fixed certificate from common-jvm
-  val dataProviderSignature =
-    ByteString.copyFrom(
-      Base64.getDecoder()
-        .decode(
-          "MEQCIHs37Y61C0kPM/BiiPTU5+rDLG6NpInfQ5OZ+EG1GHUDAiAnplieJkMve3gVvRHY65cQ1vD3" +
-            "ZO2bZiiPR4LSqTPFkQ=="
-        )
-    )
 
   @Test
-  fun `duchy verify edp participation signature`() {
+  fun `duchy verifies edp participation signature`() {
 
     /** Items already known to the duchy */
     val computation =
       Computation(
-        dataProviderList = someSerializedDataProviderList,
-        dataProviderListSalt = someDataProviderListSalt,
-        measurementSpec = someSerializedMeasurementSpec,
+        dataProviderList = SOME_SERIALIZED_DATA_PROVIDER_LIST,
+        dataProviderListSalt = SOME_DATA_PROVIDER_LIST_SALT,
+        measurementSpec = SOME_SERIALIZED_MEASUREMENT_SPEC,
         encryptedRequisitionSpec = someEncryptedRequisitionSpec
       )
     val requisition =
       Requisition(
-        dataProviderCertificate = ByteString.copyFrom(dataProviderX509.getEncoded()),
+        dataProviderCertificate = ByteString.copyFrom(DATA_PROVIDER_X509.getEncoded()),
         requisitionSpecHash = someRequisitionSpecHash
       )
 
     assertTrue(
       verifyDataProviderParticipation(
-        dataProviderParticipationSignature = dataProviderSignature,
+        dataProviderParticipationSignature = DATA_PROVIDER_SIGNATURE,
         computation = computation,
         requisition = requisition
       )

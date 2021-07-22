@@ -30,6 +30,9 @@ import org.wfanet.measurement.consent.crypto.sign
  * 1. EDP computes the RequisitionFingerprint, which is the concatenation of a. The SHA-256 hash of
  * the encrypted RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
  * 2. Signs the RequisitionFingerprint resulting in the participationSignature
+ *
+ * We assume the signed [requisition].measurementSpec was verified when the requisition was
+ * initially received by the data provider.
  */
 suspend fun createParticipationSignature(
   hybridCryptor: HybridCryptor,
@@ -45,15 +48,12 @@ suspend fun createParticipationSignature(
   val requisitionFingerprint =
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
-      /**
-       * We assume the signed measurementSpec was verified when the requisition was initially
-       * received by the data provider.
-       */
       .concat(requireNotNull(requisition.measurementSpec.data))
+  val dataProviderX509Certificate = readCertificate(dataProviderX509)
   val privateKey: PrivateKey =
-    requireNotNull(privateKeyHandle.toJavaPrivateKey(readCertificate(dataProviderX509)))
+    requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderX509Certificate))
   val participationSignature =
-    privateKey.sign(certificate = readCertificate(dataProviderX509), data = requisitionFingerprint)
+    privateKey.sign(certificate = dataProviderX509Certificate, data = requisitionFingerprint)
   return SignedData.newBuilder()
     .apply {
       data = requisitionFingerprint

@@ -15,6 +15,7 @@
 package org.wfanet.measurement.consent.crypto.keystore.testing
 
 import com.google.protobuf.ByteString
+import java.util.concurrent.ConcurrentHashMap
 import org.wfanet.measurement.consent.crypto.keystore.KeyStore
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
@@ -25,13 +26,15 @@ import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
  * production.
  */
 class InMemoryKeyStore : KeyStore() {
-  private val keyStoreMap = HashMap<String, ByteString>()
+  private val keyStoreMap = ConcurrentHashMap<String, ByteString>()
 
   override suspend fun storePrivateKeyDer(
     id: String,
     privateKeyBytes: ByteString
   ): PrivateKeyHandle {
-    keyStoreMap[id] = privateKeyBytes
+    require(keyStoreMap.putIfAbsent(id, privateKeyBytes) == null) {
+      "Cannot write to an existing key: $id"
+    }
     return PrivateKeyHandle(id, this)
   }
 
