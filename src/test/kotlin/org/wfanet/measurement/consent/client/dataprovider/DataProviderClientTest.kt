@@ -20,6 +20,7 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Base64
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Requisition
@@ -27,26 +28,26 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
-import org.wfanet.measurement.consent.crypto.hash
+import org.wfanet.measurement.common.crypto.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.common.crypto.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.hybridencryption.testing.FakeHybridCryptor
-import org.wfanet.measurement.consent.crypto.keys.InMemoryKeyStore
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
+import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.verifySignature
-import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
-import org.wfanet.measurement.consent.testing.EDP1_KEY_FILE
 import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
 
 class DataProviderClientTest {
-  val hybridCryptor: HybridCryptor = FakeHybridCryptor()
+  val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
   val publicKey = EncryptionPublicKey.getDefaultInstance()
-  val dataProviderX509: X509Certificate = readCertificate(EDP1_CERT_PEM_FILE)
-  val dataProviderPrivateKey: PrivateKey = readPrivateKey(EDP1_KEY_FILE, KEY_ALGORITHM)
+  val dataProviderX509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+  val dataProviderPrivateKey: PrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
   val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
   val someRequisitionSpec =
     RequisitionSpec.newBuilder()
-      .also {
-        it.dataProviderListHash =
-          hash(ByteString.copyFromUtf8("some-data-provider-list"), someDataProviderListSalt)
+      .apply {
+        dataProviderListHash =
+          hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), someDataProviderListSalt)
       }
       .build()
       .toByteString()
@@ -54,20 +55,20 @@ class DataProviderClientTest {
   val someSerializedMeasurmentSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
   val keyStore = InMemoryKeyStore()
   val privateKeyHandleKey = "some arbitrary key"
-  val privateKeyHandle =
-    keyStore.storePrivateKeyDer(
-      privateKeyHandleKey,
-      ByteString.copyFrom(dataProviderPrivateKey.getEncoded())
-    )
 
   @Test
-  fun `data provider indicate requisition participation`() {
+  fun `data provider indicate requisition participation`() = runBlocking {
+    val privateKeyHandle =
+      keyStore.storePrivateKeyDer(
+        privateKeyHandleKey,
+        ByteString.copyFrom(dataProviderPrivateKey.getEncoded())
+      )
     val requisition =
       Requisition.newBuilder()
-        .also {
-          it.encryptedRequisitionSpec = someEncryptedRequisitionSpec
-          it.measurementSpec =
-            SignedData.newBuilder().also { it.data = someSerializedMeasurmentSpec }.build()
+        .apply {
+          encryptedRequisitionSpec = someEncryptedRequisitionSpec
+          measurementSpec =
+            SignedData.newBuilder().apply { data = someSerializedMeasurmentSpec }.build()
         }
         .build()
     val dataProviderParticipation: SignedData =

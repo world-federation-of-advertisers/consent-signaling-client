@@ -12,13 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.keys.testing
+package org.wfanet.measurement.consent.crypto.keystore.testing
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
+import java.security.PrivateKey
+import java.security.cert.X509Certificate
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-import org.wfanet.measurement.consent.crypto.keys.KeyStore
+import org.wfanet.measurement.common.crypto.readCertificate
+import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.consent.crypto.keystore.KeyStore
+import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
+import org.wfanet.measurement.consent.testing.SERVER_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.SERVER_KEY_FILE
 
 private const val KEY = "some arbitrary key"
 private val VALUE = ByteString.copyFromUtf8("some arbitrary value")
@@ -38,5 +45,15 @@ abstract class AbstractKeyStoreTest {
   fun `get null for invalid key from KeyStore`() = runBlocking {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(KEY)
     assertThat(privateKeyHandle).isEqualTo(null)
+  }
+
+  @Test
+  fun `store and retrieve java security PrivateKey`() = runBlocking {
+    val privateKey: PrivateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
+    keyStore.storePrivateKeyDer(KEY, ByteString.copyFrom(privateKey.getEncoded()))
+    val privateKeyHandle = requireNotNull(keyStore.getPrivateKeyHandle(KEY))
+    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    assertThat(requireNotNull(privateKeyHandle.toJavaPrivateKey(certificate)).getEncoded())
+      .isEqualTo(privateKey.getEncoded())
   }
 }

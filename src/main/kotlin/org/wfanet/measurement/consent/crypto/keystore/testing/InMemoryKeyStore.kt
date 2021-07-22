@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.keys
+package org.wfanet.measurement.consent.crypto.keystore.testing
 
 import com.google.protobuf.ByteString
+import org.wfanet.measurement.consent.crypto.keystore.KeyStore
+import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
 /**
  * A simple "In-Memory" implementation of [KeyStore] using a [HashMap]
@@ -25,22 +27,19 @@ import com.google.protobuf.ByteString
 class InMemoryKeyStore : KeyStore() {
   private val keyStoreMap = HashMap<String, ByteString>()
 
-  override fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle {
+  override suspend fun storePrivateKeyDer(
+    id: String,
+    privateKeyBytes: ByteString
+  ): PrivateKeyHandle {
     keyStoreMap[id] = privateKeyBytes
     return PrivateKeyHandle(id, this)
   }
 
-  override fun getPrivateKeyHandle(id: String): PrivateKeyHandle? {
-    keyStoreMap[id]?.let {
-      return PrivateKeyHandle(id, this)
-    }
-    return null
+  override suspend fun getPrivateKeyHandle(id: String): PrivateKeyHandle? {
+    return keyStoreMap[id]?.let { PrivateKeyHandle(id, this) }
   }
 
-  override fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString? {
-    keyStoreMap[privateKeyHandle.id]?.let {
-      return it
-    }
-    return null
+  override suspend fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString? {
+    return keyStoreMap[privateKeyHandle.id]?.let { it }
   }
 }

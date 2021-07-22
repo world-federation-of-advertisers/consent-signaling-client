@@ -11,11 +11,12 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-package org.wfanet.measurement.consent.crypto.keys
+package org.wfanet.measurement.consent.crypto.keystore
 
 import com.google.crypto.tink.KeysetHandle
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
+import java.security.cert.X509Certificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 
 /**
@@ -26,25 +27,25 @@ import org.wfanet.measurement.common.crypto.readPrivateKey
  * Convenience methods of [toTinkKeysetHandle] and [toJavaPrivateKey] are included and used by
  * various parts of the 'crypto' library
  */
-class PrivateKeyHandle internal constructor(val id: String, private val keyStore: KeyStore) {
+class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStore) {
 
   /**
    * Converts the [PrivateKeyHandle] into a usable [TinkKeysetHandle] object (used by TinkCrypto)
    *
    * 'crypto' module internal use only
    */
-  internal fun toTinkKeysetHandle(): KeysetHandle {
+  internal suspend fun toTinkKeysetHandle(): KeysetHandle {
     TODO("Not yet implemented")
   }
 
   /**
-   * Converts a [PrivateKeyHandle] into a Java Security Private Key object TODO update this so we
+   * Converts a [PrivateKeyHandle] into a Java Security Private Key object. TODO update this so we
    * don't need to expose toJavaPrivateKey to encryption/signing libraries
    */
-  fun toJavaPrivateKey(alg: String): PrivateKey? {
+  suspend fun toJavaPrivateKey(certificate: X509Certificate): PrivateKey? {
     val internalPrivateKey = toByteString()
     internalPrivateKey?.let {
-      return readPrivateKey(internalPrivateKey, alg)
+      return readPrivateKey(internalPrivateKey, certificate.getPublicKey().getAlgorithm())
     }
     return null
   }
@@ -54,7 +55,7 @@ class PrivateKeyHandle internal constructor(val id: String, private val keyStore
    *
    * 'crypto' module internal use only
    */
-  internal fun toByteString(): ByteString? {
+  internal suspend fun toByteString(): ByteString? {
     return keyStore.readPrivateKey(this)
   }
 }

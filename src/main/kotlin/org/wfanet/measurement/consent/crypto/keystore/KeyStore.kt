@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.keys
+package org.wfanet.measurement.consent.crypto.keystore
 
 import com.google.protobuf.ByteString
 
@@ -26,17 +26,25 @@ import com.google.protobuf.ByteString
  */
 abstract class KeyStore {
 
-  /** Store the [privateKey] in [KeyStore] and returns a [PrivateKeyHandle] */
-  abstract fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
+  /**
+   * Stores the [privateKeyBytes] at [id]
+   *
+   * @return [PrivateKeyHandle] representing the private key
+   */
+  abstract suspend fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
   /**
-   * Retrieves a [PrivateKeyHandle] of an existing key in [KeyStore]. Returns null if not present
+   * Accesses a [PrivateKeyHandle] via an existing key in [KeyStore].
+   *
+   * @return `null` if not present.
    */
-  abstract fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
+  abstract suspend fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
 
   /**
-   * Reads the contents of a private key stored in inside the [PrivateKeyHandle] in the [KeyStore].
-   * This can only be access by this 'crypto' module. Returns null if not present.
+   * Can only be access by this 'crypto' module. Accesses contents of a private key stored in inside
+   * the [PrivateKeyHandle].
+   *
+   * @return `null` if not present.
    */
-  internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
+  abstract suspend fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
 }

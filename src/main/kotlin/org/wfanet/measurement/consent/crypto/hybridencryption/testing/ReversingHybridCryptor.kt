@@ -17,14 +17,13 @@ package org.wfanet.measurement.consent.crypto.hybridencryption.testing
 import com.google.protobuf.ByteString
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
+import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
 /**
- * [FakeHybridCryptor] is an implementation of [HybridCryptor] that actually does no crypto. It only
- * reverses the [data]. This should only be used for bring-up, unit testing, or debugging. Do not
- * use in production.
+ * Does no crypto. It only reverses the [data]. This should only be used for bring-up, unit testing,
+ * or debugging. Do not use in production.
  */
-class FakeHybridCryptor : HybridCryptor {
+class ReversingHybridCryptor : HybridCryptor {
   private fun reverseByteString(data: ByteString): ByteString {
     return ByteString.copyFrom(data.toByteArray().reversedArray())
   }

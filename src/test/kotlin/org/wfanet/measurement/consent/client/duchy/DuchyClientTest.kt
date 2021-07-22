@@ -23,38 +23,40 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.common.crypto.readCertificate
-import org.wfanet.measurement.consent.crypto.hash
+import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.hybridencryption.testing.FakeHybridCryptor
-import org.wfanet.measurement.consent.testing.EDP1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 
 class DuchyClientTest {
 
-  val hybridCryptor: HybridCryptor = FakeHybridCryptor()
+  val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
   // TODO Switch this to real cryptography
   val dataProviderPublicKey = EncryptionPublicKey.getDefaultInstance()
   val someDataProviderListSalt = ByteString.copyFromUtf8("some-salt-0")
   val someSerializedDataProviderList = ByteString.copyFromUtf8("some-data-provider-list")
-  val dataProviderX509: X509Certificate = readCertificate(EDP1_CERT_PEM_FILE)
+  // We use a fixed certificate so we can verify the signature against a known certificate
+  val dataProviderX509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
   val someRequisitionSpec =
     RequisitionSpec.newBuilder()
-      .also {
-        it.dataProviderListHash =
-          hash(ByteString.copyFromUtf8("some-data-provider-list"), someDataProviderListSalt)
+      .apply {
+        dataProviderListHash =
+          hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), someDataProviderListSalt)
       }
       .build()
       .toByteString()
   val someEncryptedRequisitionSpec =
     hybridCryptor.encrypt(dataProviderPublicKey, someRequisitionSpec)
   // There is no salt when hashing the encrypted requisition spec
-  val someRequisitionSpecHash = hash(someEncryptedRequisitionSpec)
+  val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
   val someSerializedMeasurementSpec = ByteString.copyFromUtf8("some-serialized-measurement-spec")
+  // This is pre-calculated using a fixed certificate from common-jvm
   val dataProviderSignature =
     ByteString.copyFrom(
       Base64.getDecoder()
         .decode(
-          "MEUCIQCezffjEDL72/YwtOCKdm2vxmPpQfyT/ShYw17BomoEGgIgRBN0ZVZiVNKHCOJXWnii4UEEK" +
-            "gesMd1TNfmaCjBYjdo="
+          "MEQCIHs37Y61C0kPM/BiiPTU5+rDLG6NpInfQ5OZ+EG1GHUDAiAnplieJkMve3gVvRHY65cQ1vD3" +
+            "ZO2bZiiPR4LSqTPFkQ=="
         )
     )
 

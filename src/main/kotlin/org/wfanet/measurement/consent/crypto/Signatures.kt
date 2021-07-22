@@ -48,8 +48,5 @@ fun X509Certificate.verifySignature(data: ByteString, signature: ByteString): Bo
  * Verifies that the [signedData] was signed by the entity represented by this [X509Certificate].
  */
 fun X509Certificate.verifySignature(signedData: SignedData): Boolean {
-  val verifier = Signature.getInstance(this.sigAlgName, jceProvider)
-  verifier.initVerify(this)
-  verifier.update(signedData.data.asReadOnlyByteBuffer())
-  return verifier.verify(signedData.signature.toByteArray())
+  return this.verifySignature(signedData.data, signedData.signature)
 }

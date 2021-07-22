@@ -17,7 +17,7 @@ package org.wfanet.measurement.consent.client.duchy
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.common.crypto.readCertificate
-import org.wfanet.measurement.consent.crypto.hash
+import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 data class Computation(
@@ -44,19 +44,17 @@ fun verifyDataProviderParticipation(
   computation: Computation
 ): Boolean {
   val hashedParticipantList: ByteString =
-    hash(computation.dataProviderList, computation.dataProviderListSalt)
+    hashSha256(computation.dataProviderList, computation.dataProviderListSalt)
   val requisitionFingerprint =
     requireNotNull(requisition.requisitionSpecHash)
       .concat(hashedParticipantList)
       .concat(requireNotNull(computation.measurementSpec))
 
-  // TODO: Verify DataProviderPublicKey is properly signed
+  // TODO: Verify Certificate Chain
   val dataProviderX509: X509Certificate = readCertificate(requisition.dataProviderCertificate)
 
-  /**
-   * TODO Verify the dataProviderSignature has not been previously reused to protect against replay
-   * attacks
-   */
+  // TODO Verify the dataProviderSignature has not been previously reused to protect against replay
+  // attacks
   return dataProviderX509.verifySignature(
     requisitionFingerprint,
     dataProviderParticipationSignature
