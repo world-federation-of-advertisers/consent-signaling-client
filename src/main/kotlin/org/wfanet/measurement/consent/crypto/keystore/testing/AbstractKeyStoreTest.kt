@@ -22,10 +22,10 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as SERVER_CERT_PEM_FILE
+import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_KEY_FILE as SERVER_KEY_FILE
+import org.wfanet.measurement.common.crypto.testing.KEY_ALGORITHM
 import org.wfanet.measurement.consent.crypto.keystore.KeyStore
-import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
-import org.wfanet.measurement.consent.testing.SERVER_CERT_PEM_FILE
-import org.wfanet.measurement.consent.testing.SERVER_KEY_FILE
 
 private const val KEY = "some arbitrary key"
 private val VALUE = ByteString.copyFromUtf8("some arbitrary value")

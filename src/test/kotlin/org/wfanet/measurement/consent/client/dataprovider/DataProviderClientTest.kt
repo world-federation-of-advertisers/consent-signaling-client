@@ -28,14 +28,14 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
-import org.wfanet.measurement.common.crypto.testing.EDP_1_CERT_PEM_FILE
-import org.wfanet.measurement.common.crypto.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.common.crypto.testing.KEY_ALGORITHM
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.verifySignature
-import org.wfanet.measurement.consent.testing.KEY_ALGORITHM
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 
 class DataProviderClientTest {
   val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
@@ -58,6 +58,7 @@ class DataProviderClientTest {
 
   @Test
   fun `data provider indicate requisition participation`() = runBlocking {
+    print("XXXX:${System.getenv("TEST_WORKSPACE")}")
     val privateKeyHandle =
       keyStore.storePrivateKeyDer(
         privateKeyHandleKey,
