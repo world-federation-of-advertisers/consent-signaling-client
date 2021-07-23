@@ -15,14 +15,25 @@
 package org.wfanet.measurement.consent.testing
 
 import java.io.File
+import java.nio.file.Paths
 
-private const val TESTDATA_DIR = "src/main/kotlin/org/wfanet/measurement/consent/testing/"
+private val TESTDATA_DIR_PATH =
+  Paths.get(
+    "src",
+    "main",
+    "kotlin",
+    "org",
+    "wfanet",
+    "measurement",
+    "consent",
+    "testing",
+  )
 
-val EDP_1_CERT_PEM_FILE = File("${TESTDATA_DIR}edp_1_server.pem")
-val EDP_1_KEY_FILE = File("${TESTDATA_DIR}edp_1_server.key")
+val EDP_1_CERT_PEM_FILE = File("${TESTDATA_DIR_PATH}/edp_1.pem")
+val EDP_1_KEY_FILE = File("${TESTDATA_DIR_PATH}/edp_1.key")
 
-val DUCHY_1_NON_AGG_CERT_PEM_FILE = File("${TESTDATA_DIR}non_aggregator_1_server.pem")
-val DUCHY_1_NON_AGG_KEY_FILE = File("${TESTDATA_DIR}non_aggregator_1_server.key")
+val DUCHY_1_NON_AGG_CERT_PEM_FILE = File("${TESTDATA_DIR_PATH}/non_aggregator_1.pem")
+val DUCHY_1_NON_AGG_KEY_FILE = File("${TESTDATA_DIR_PATH}/non_aggregator_1.key")
 
-val DUCHY_AGG_CERT_PEM_FILE = File("${TESTDATA_DIR}aggregator_server.pem")
-val DUCHY_AGG_KEY_FILE = File("${TESTDATA_DIR}aggregator_server.key")
+val DUCHY_AGG_CERT_PEM_FILE = File("${TESTDATA_DIR_PATH}/aggregator.pem")
+val DUCHY_AGG_KEY_FILE = File("${TESTDATA_DIR_PATH}/aggregator.key")

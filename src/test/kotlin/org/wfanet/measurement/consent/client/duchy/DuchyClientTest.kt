@@ -32,7 +32,7 @@ import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingH
 private val DATA_PROVIDER_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
 private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
-// We use a fixed certificate so we can verify the signature against a known certificate
+/** We use a fixed certificate so we can verify the signature against a known certificate. */
 private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
 private val SOME_REQUISITION_SPEC =
   RequisitionSpec.newBuilder()
@@ -71,7 +71,6 @@ class DuchyClientTest {
         dataProviderList = SOME_SERIALIZED_DATA_PROVIDER_LIST,
         dataProviderListSalt = SOME_DATA_PROVIDER_LIST_SALT,
         measurementSpec = SOME_SERIALIZED_MEASUREMENT_SPEC,
-        encryptedRequisitionSpec = someEncryptedRequisitionSpec
       )
     val requisition =
       Requisition(

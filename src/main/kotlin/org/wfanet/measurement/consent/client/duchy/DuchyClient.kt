@@ -20,15 +20,22 @@ import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.verifySignature
 
+// Fields from the computationDetails proto of the internal duchy api
 data class Computation(
+  // Serialized `DataProviderList`.
   val dataProviderList: ByteString,
+  // Salt for SHA256 hash of `dataProviderList`.
   val dataProviderListSalt: ByteString,
-  val measurementSpec: ByteString,
-  val encryptedRequisitionSpec: ByteString,
+  // Serialized `MeasurementSpec`.
+  val measurementSpec: ByteString
 )
 
+// Fields from the requisitionDetails proto of the internal duchy api
 data class Requisition(
+  // X.509 certificate in DER format which can be verified using the `DataProvider`'s root
+  // certificate.
   val dataProviderCertificate: ByteString,
+  // SHA256 hash of encrypted `RequisitionSpec`.
   val requisitionSpecHash: ByteString
 )
 

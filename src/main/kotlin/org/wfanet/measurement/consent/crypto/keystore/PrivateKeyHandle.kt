@@ -44,7 +44,7 @@ class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStor
     return null
   }
 
-  /** @return [ByteString] of the private key */
+  /** Returns [ByteString] of the private key */
   internal suspend fun toByteString(): ByteString? {
     return keyStore.readPrivateKey(this)
   }
