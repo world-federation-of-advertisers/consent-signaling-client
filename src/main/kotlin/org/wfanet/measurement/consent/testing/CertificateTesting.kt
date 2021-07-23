@@ -16,8 +16,8 @@ package org.wfanet.measurement.consent.testing
 
 import java.io.File
 
-private val TESTDATA_DIR =
-  "external/wfa_common_jvm/src/main/kotlin/org/wfanet/measurement/common/crypto/testing/testdata/"
+private const val TESTDATA_DIR = "src/main/kotlin/org/wfanet/measurement/consent/testing/"
+
 val EDP_1_CERT_PEM_FILE = File("${TESTDATA_DIR}edp_1_server.pem")
 val EDP_1_KEY_FILE = File("${TESTDATA_DIR}edp_1_server.key")
 
