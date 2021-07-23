@@ -29,11 +29,11 @@ private val TESTDATA_DIR_PATH =
     "testing",
   )
 
-val EDP_1_CERT_PEM_FILE = File("${TESTDATA_DIR_PATH}/edp_1.pem")
-val EDP_1_KEY_FILE = File("${TESTDATA_DIR_PATH}/edp_1.key")
+val EDP_1_CERT_PEM_FILE = File("$TESTDATA_DIR_PATH/edp_1.pem")
+val EDP_1_KEY_FILE = File("$TESTDATA_DIR_PATH/edp_1.key")
 
-val DUCHY_1_NON_AGG_CERT_PEM_FILE = File("${TESTDATA_DIR_PATH}/non_aggregator_1.pem")
-val DUCHY_1_NON_AGG_KEY_FILE = File("${TESTDATA_DIR_PATH}/non_aggregator_1.key")
+val DUCHY_1_NON_AGG_CERT_PEM_FILE = File("$TESTDATA_DIR_PATH/non_aggregator_1.pem")
+val DUCHY_1_NON_AGG_KEY_FILE = File("$TESTDATA_DIR_PATH/non_aggregator_1.key")
 
-val DUCHY_AGG_CERT_PEM_FILE = File("${TESTDATA_DIR_PATH}/aggregator.pem")
-val DUCHY_AGG_KEY_FILE = File("${TESTDATA_DIR_PATH}/aggregator.key")
+val DUCHY_AGG_CERT_PEM_FILE = File("$TESTDATA_DIR_PATH/aggregator.pem")
+val DUCHY_AGG_KEY_FILE = File("$TESTDATA_DIR_PATH/aggregator.key")
