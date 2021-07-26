@@ -1,3 +1,4 @@
+load("@wfa_common_jvm//build/wfa:macros.bzl", "generate_root_certificate", "generate_user_certificate")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 
 package(
@@ -8,10 +9,92 @@ package(
     ],
 )
 
+generate_root_certificate(
+    name = "mc_1_root",
+)
+
+generate_user_certificate(
+    name = "mc_1",
+    common_name = "some-mc-1.example.com",
+    org = "Some MC 1",
+    root_certificate = ":mc_1_root.pem",
+    root_key = ":mc_1_root.key",
+)
+
+generate_root_certificate(
+    name = "edp_1_root",
+)
+
+generate_user_certificate(
+    name = "edp_1",
+    common_name = "some-edp-1.example.com",
+    org = "Some EDP 1",
+    root_certificate = ":edp_1_root.pem",
+    root_key = ":edp_1_root.key",
+)
+
+generate_root_certificate(
+    name = "aggregator_root",
+)
+
+generate_user_certificate(
+    name = "aggregator",
+    common_name = "duchy-aggregator.example.com",
+    org = "The Aggregator",
+    root_certificate = ":aggregator_root.pem",
+    root_key = ":aggregator_root.key",
+)
+
+generate_root_certificate(
+    name = "non_aggregator_1_root",
+)
+
+generate_user_certificate(
+    name = "non_aggregator_1",
+    common_name = "some-duchy-1.example.com",
+    org = "A Duchy 1",
+    root_certificate = ":non_aggregator_1_root.pem",
+    root_key = ":non_aggregator_1_root.key",
+)
+
+generate_root_certificate(
+    name = "non_aggregator_2_root",
+)
+
+generate_user_certificate(
+    name = "non_aggregator_2",
+    common_name = "some-duchy-2.example.com",
+    org = "A Duchy 1",
+    root_certificate = ":non_aggregator_2_root.pem",
+    root_key = ":non_aggregator_2_root.key",
+)
+
+filegroup(
+    name = "edp_certs",
+    srcs = [
+        "edp_1.key",
+        "edp_1.pem",
+    ],
+)
+
+filegroup(
+    name = "duchy_certs",
+    srcs = [
+        ":aggregator.key",
+        ":aggregator.pem",
+        ":non_aggregator_1.key",
+        ":non_aggregator_1.pem",
+    ],
+)
+
 kt_jvm_library(
     name = "testing",
     srcs = glob(["*.kt"]),
-    data = ["@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing/testdata:certs"],
+    data = [
+        ":duchy_certs",
+        ":edp_certs",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing/testdata:static_certs",
+    ],
     deps = [
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common",
     ],

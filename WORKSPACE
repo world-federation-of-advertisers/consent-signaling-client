@@ -22,12 +22,12 @@ http_archive(
     ],
 )
 
-# Measurement system.
+# Common JVM for Measurement
 http_archive(
     name = "wfa_common_jvm",
-    sha256 = "c7d00a5b8e68d947e2998570c9005ab331cf7d298e188b2451500fbaae3bd2ca",
-    strip_prefix = "common-jvm-01c3c5c0de76b864bcdb229138b5bdeda6ae50de",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/01c3c5c0de76b864bcdb229138b5bdeda6ae50de.tar.gz",
+    sha256 = "11b85894fc39b0ac1f8679b6566cb6b15987d989117b4e99eb8731742021abc1",
+    strip_prefix = "common-jvm-ad2d631ccb05ac592756de2793bd763adfae2b7c",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/ad2d631ccb05ac592756de2793bd763adfae2b7c.tar.gz",
 )
 
 # @com_google_truth_truth

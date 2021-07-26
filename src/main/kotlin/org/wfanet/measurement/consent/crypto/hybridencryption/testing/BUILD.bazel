@@ -2,7 +2,7 @@ load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 
 package(
     default_testonly = True,
-    default_visibility = ["//src/test/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption:__subpackages__"],
+    default_visibility = ["//src/test/kotlin/org/wfanet/measurement/consent:__subpackages__"],
 )
 
 kt_jvm_library(
@@ -10,6 +10,8 @@ kt_jvm_library(
     srcs = glob(["*.kt"]),
     deps = [
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore/testing",
         "//src/main/proto/wfa/measurement/api/v2alpha:certificate_java_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
         "@wfa_common_jvm//imports/java/com/google/common/truth",

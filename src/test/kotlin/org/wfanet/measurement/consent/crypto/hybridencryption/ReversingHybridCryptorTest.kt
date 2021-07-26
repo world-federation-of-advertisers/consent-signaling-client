@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.keys
+package org.wfanet.measurement.consent.crypto.hybridencryption
 
-import org.wfanet.measurement.consent.crypto.keys.testing.AbstractKeyStoreTest
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.AbstractHybridCryptorTest
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 
-class InMemoryKeyStoreTest : AbstractKeyStoreTest() {
-  override val keyStore = InMemoryKeyStore()
+class ReversingHybridCryptorTest : AbstractHybridCryptorTest() {
+  override val hybridCryptor = ReversingHybridCryptor()
 }

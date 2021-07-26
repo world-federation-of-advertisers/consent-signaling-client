@@ -3,10 +3,10 @@ load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_test")
 kt_jvm_test(
     name = "InMemoryKeyStoreTest",
     srcs = ["InMemoryKeyStoreTest.kt"],
-    test_class = "org.wfanet.measurement.consent.crypto.keys.InMemoryKeyStoreTest",
+    test_class = "org.wfanet.measurement.consent.crypto.keystore.InMemoryKeyStoreTest",
     deps = [
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keys",
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keys/testing",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore/testing",
         "@wfa_common_jvm//imports/java/com/google/common/truth",
         "@wfa_common_jvm//imports/java/com/google/common/truth/extensions/proto",
         "@wfa_common_jvm//imports/java/org/junit",

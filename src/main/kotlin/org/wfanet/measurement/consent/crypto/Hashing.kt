@@ -20,14 +20,14 @@ import java.security.MessageDigest
 const val HASH_ALGORITHM = "SHA-256"
 
 /** Generates a SHA-256 of [data] using [salt] */
-fun hash(data: ByteString, salt: ByteString): ByteString {
+fun hashSha256(data: ByteString, salt: ByteString): ByteString {
   val sha256MessageDigest = MessageDigest.getInstance(HASH_ALGORITHM)
   sha256MessageDigest.update(salt.toByteArray())
   return ByteString.copyFrom(sha256MessageDigest.digest(data.toByteArray()))
 }
 
-/** Generates a SHA-256 of [data] without a [salt] */
-fun hash(data: ByteString): ByteString {
+/** Generates a SHA-256 of [data] without a salt */
+fun hashSha256(data: ByteString): ByteString {
   val sha256MessageDigest = MessageDigest.getInstance(HASH_ALGORITHM)
   return ByteString.copyFrom(sha256MessageDigest.digest(data.toByteArray()))
 }

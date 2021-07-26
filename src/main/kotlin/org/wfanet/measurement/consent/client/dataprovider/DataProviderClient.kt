@@ -20,9 +20,9 @@ import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
-import org.wfanet.measurement.consent.crypto.hash
+import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
+import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.sign
 
 /**
@@ -30,8 +30,11 @@ import org.wfanet.measurement.consent.crypto.sign
  * 1. EDP computes the RequisitionFingerprint, which is the concatenation of a. The SHA-256 hash of
  * the encrypted RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
  * 2. Signs the RequisitionFingerprint resulting in the participationSignature
+ *
+ * We assume the signed [requisition].measurementSpec was verified when the requisition was
+ * initially received by the data provider.
  */
-fun indicateRequisitionParticipation(
+suspend fun createParticipationSignature(
   hybridCryptor: HybridCryptor,
   requisition: Requisition,
   privateKeyHandle: PrivateKeyHandle,
@@ -41,22 +44,20 @@ fun indicateRequisitionParticipation(
   val requisitionSpec =
     RequisitionSpec.parseFrom(hybridCryptor.decrypt(privateKeyHandle, encryptedRequisitionSpec))
   // There is no salt when hashing the encrypted requisition spec
-  val hashedEncryptedRequisitionSpec: ByteString = hash(encryptedRequisitionSpec)
+  val hashedEncryptedRequisitionSpec: ByteString = hashSha256(encryptedRequisitionSpec)
   val requisitionFingerprint =
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
-      /**
-       * We assume the signed measurementSpec was verified when the requisition was initially
-       * received by the data provider.
-       */
       .concat(requireNotNull(requisition.measurementSpec.data))
-  val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey("EC"))
+  val dataProviderX509Certificate = readCertificate(dataProviderX509)
+  val privateKey: PrivateKey =
+    requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderX509Certificate))
   val participationSignature =
-    privateKey.sign(certificate = readCertificate(dataProviderX509), data = requisitionFingerprint)
+    privateKey.sign(certificate = dataProviderX509Certificate, data = requisitionFingerprint)
   return SignedData.newBuilder()
-    .also {
-      it.data = requisitionFingerprint
-      it.signature = participationSignature
+    .apply {
+      data = requisitionFingerprint
+      signature = participationSignature
     }
     .build()
 }

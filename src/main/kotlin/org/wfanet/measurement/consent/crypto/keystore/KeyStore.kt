@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.keys
+package org.wfanet.measurement.consent.crypto.keystore
 
 import com.google.protobuf.ByteString
 
@@ -21,22 +21,30 @@ import com.google.protobuf.ByteString
  *
  * Clients of this class can store [PrivateKeyBytes] (currently in DER format) and can retrieve a
  * [PrivateKeyHandle] of the stored key, however the client will not be enable to read the actual
- * key contents stored in KMS. Only this 'crypto' module will have access to the actual private key
- * contents (currently used by signage and crypto classes)
+ * key contents stored in KMS.
  */
 abstract class KeyStore {
 
-  /** Store the [privateKey] in [KeyStore] and returns a [PrivateKeyHandle] */
-  abstract fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
+  /**
+   * Stores the [privateKeyBytes] at [id]
+   *
+   * @return [PrivateKeyHandle] representing the private key
+   */
+  abstract suspend fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
 
   /**
-   * Retrieves a [PrivateKeyHandle] of an existing key in [KeyStore]. Returns null if not present
+   * Accesses an existing private key handle specified by [id].
+   *
+   * @return [PrivateKeyHandle] for the key or `null` if not found.
    */
-  abstract fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
+  abstract suspend fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
 
   /**
-   * Reads the contents of a private key stored in inside the [PrivateKeyHandle] in the [KeyStore].
-   * This can only be access by this 'crypto' module. Returns null if not present.
+   * Accesses an existing private key specified by [privateKeyHandle]. Should only be accessed by
+   * this 'crypto' module.
+   *
+   * @return [ByteString] of the private key for a specified [privateKeyHandle] or `null` if not
+   * present.
    */
-  internal abstract fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
+  abstract suspend fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
 }

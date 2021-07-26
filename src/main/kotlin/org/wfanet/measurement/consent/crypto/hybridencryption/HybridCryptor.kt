@@ -16,9 +16,9 @@ package org.wfanet.measurement.consent.crypto.hybridencryption
 
 import com.google.protobuf.ByteString
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
+import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
-/** [HybridCryptor] is a simple interface that be implemented to encrypt and decrypt bytes */
+/** Used to encrypt and decrypt bytes */
 interface HybridCryptor {
   /** Encrypts [data] using the public key stored in the [EncryptionPublicKey] Protobuf */
   fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteString): ByteString
