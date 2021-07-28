@@ -1,0 +1,18 @@
+load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
+
+package(default_visibility = [
+    "//src/main/kotlin/org/wfanet/measurement/consent:__subpackages__",
+    "//src/test/kotlin/org/wfanet/measurement/consent:__subpackages__",
+])
+
+kt_jvm_library(
+    name = "hybridencryption",
+    srcs = glob(["*.kt"]),
+    deps = [
+        "//imports/java/com/google/crypto/tink",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
+        "//src/main/proto/wfa/measurement/api/v2alpha:certificate_java_proto",
+        "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:security_provider",
+    ],
+)

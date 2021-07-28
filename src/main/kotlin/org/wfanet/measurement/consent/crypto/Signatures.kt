@@ -18,6 +18,7 @@ import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.jceProvider
 
 /**
@@ -41,4 +42,11 @@ fun X509Certificate.verifySignature(data: ByteString, signature: ByteString): Bo
   verifier.initVerify(this)
   verifier.update(data.asReadOnlyByteBuffer())
   return verifier.verify(signature.toByteArray())
+}
+
+/**
+ * Verifies that the [signedData] was signed by the entity represented by this [X509Certificate].
+ */
+fun X509Certificate.verifySignature(signedData: SignedData): Boolean {
+  return verifySignature(signedData.data, signedData.signature)
 }

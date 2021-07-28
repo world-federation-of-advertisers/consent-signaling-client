@@ -6,7 +6,14 @@ kt_jvm_library(
     name = "signatures",
     srcs = ["Signatures.kt"],
     deps = [
+        "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
         "@wfa_common_jvm//imports/java/com/google/protobuf",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:security_provider",
     ],
+)
+
+kt_jvm_library(
+    name = "hashing",
+    srcs = ["Hashing.kt"],
+    deps = ["@wfa_common_jvm//imports/java/com/google/protobuf"],
 )

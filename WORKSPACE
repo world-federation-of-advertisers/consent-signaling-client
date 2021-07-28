@@ -22,15 +22,16 @@ http_archive(
     ],
 )
 
-# Measurement system.
+# Common JVM for Measurement
 http_archive(
     name = "wfa_common_jvm",
-    sha256 = "b4f410343536bb11bb0a8a868e611be792e1cb0d493d329b9ad2fe4c4dbb7c35",
-    strip_prefix = "common-jvm-a2b9bae790fc84205499bed09bd1ac22e9cf7328",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/a2b9bae790fc84205499bed09bd1ac22e9cf7328.tar.gz",
+    sha256 = "063c72f91b6b126d4426f46cdc94ae8a98b828901eb1b6af853e5aa0df6b676c",
+    strip_prefix = "common-jvm-e5de55dabc8685f37ba5eb90a7f4c638185330f2",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/e5de55dabc8685f37ba5eb90a7f4c638185330f2.tar.gz",
 )
 
 # @com_google_truth_truth
+
 load("@wfa_common_jvm//build/com_google_truth:repo.bzl", "com_google_truth_artifact_dict")
 
 # @io_bazel_rules_kotlin
@@ -98,11 +99,12 @@ MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.4.3"))
 MAVEN_ARTIFACTS.update({
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
     "com.google.code.gson:gson": "2.8.6",
+    "com.google.crypto.tink:tink": "1.6.0",
     "com.google.guava:guava": "30.0-jre",
-    "org.conscrypt:conscrypt-openjdk-uber": "2.5.2",
-    "org.mockito.kotlin:mockito-kotlin": "3.2.0",
     "info.picocli:picocli": "4.4.0",
     "junit:junit": "4.13",
+    "org.conscrypt:conscrypt-openjdk-uber": "2.5.2",
+    "org.mockito.kotlin:mockito-kotlin": "3.2.0",
 })
 
 maven_install(
@@ -163,7 +165,7 @@ switched_rules_by_language(
 # Measurement proto.
 http_archive(
     name = "wfa_measurement_proto",
-    sha256 = "c7d87a438a446ebeacdcae8bcfed270c513ae5c5d26bccd36fb179d47e7d3365",
-    strip_prefix = "cross-media-measurement-api-ab647fffd78f29769611f05ef131ec1f1feed820",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/ab647fffd78f29769611f05ef131ec1f1feed820.tar.gz",
+    sha256 = "12f231fe7c8f75e3170ee9c6e308d355eccc354ed60ef4505f6f537812652626",
+    strip_prefix = "cross-media-measurement-api-584b40ca7b4275d194cc4cedfb877c05ec5ab24e",
+    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/584b40ca7b4275d194cc4cedfb877c05ec5ab24e.tar.gz",
 )
