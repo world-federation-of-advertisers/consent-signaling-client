@@ -73,16 +73,14 @@ val DATA_PROVIDER_SIGNATURE =
 
 class DuchyClientTest {
 
-  val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-  val someEncryptedRequisitionSpec =
-    hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, SOME_REQUISITION_SPEC)
-  // There is no salt when hashing the encrypted requisition spec
-  val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
-  val keyStore = InMemoryKeyStore()
-  val duchyX509: X509Certificate = readCertificate(DUCHY_1_NON_AGG_CERT_PEM_FILE)
-
   @Test
   fun `duchy verifies edp participation signature`() = runBlocking {
+    /** Pre-computing values passed to duchy from kingdom */
+    val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
+    val someEncryptedRequisitionSpec =
+      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, SOME_REQUISITION_SPEC)
+    // There is no salt when hashing the encrypted requisition spec
+    val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
 
     /** Items already known to the duchy */
     val computation =
@@ -108,6 +106,8 @@ class DuchyClientTest {
 
   @Test
   fun `duchy sign and encrypt result`() = runBlocking {
+    val keyStore = InMemoryKeyStore()
+    val duchyX509: X509Certificate = readCertificate(DUCHY_1_NON_AGG_CERT_PEM_FILE)
     val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
     val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
     val someMeasurementResult = ByteString.copyFromUtf8("some-measurement-result")

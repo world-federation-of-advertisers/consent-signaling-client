@@ -25,9 +25,9 @@ http_archive(
 # Common JVM for Measurement
 http_archive(
     name = "wfa_common_jvm",
-    sha256 = "11b85894fc39b0ac1f8679b6566cb6b15987d989117b4e99eb8731742021abc1",
-    strip_prefix = "common-jvm-ad2d631ccb05ac592756de2793bd763adfae2b7c",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/ad2d631ccb05ac592756de2793bd763adfae2b7c.tar.gz",
+    sha256 = "063c72f91b6b126d4426f46cdc94ae8a98b828901eb1b6af853e5aa0df6b676c",
+    strip_prefix = "common-jvm-e5de55dabc8685f37ba5eb90a7f4c638185330f2",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/e5de55dabc8685f37ba5eb90a7f4c638185330f2.tar.gz",
 )
 
 # @com_google_truth_truth

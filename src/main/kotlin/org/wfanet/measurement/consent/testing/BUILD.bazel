@@ -1,4 +1,4 @@
-load("@wfa_common_jvm//build/wfa:macros.bzl", "generate_root_certificate", "generate_user_certificate")
+load("@wfa_common_jvm//build/wfa:generate_certificate_macros.bzl", "generate_root_certificate", "generate_user_certificate")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 
 package(
@@ -70,6 +70,14 @@ generate_user_certificate(
 )
 
 filegroup(
+    name = "mc_certs",
+    srcs = [
+        "mc_1.key",
+        "mc_1.pem",
+    ],
+)
+
+filegroup(
     name = "edp_certs",
     srcs = [
         "edp_1.key",
@@ -93,6 +101,7 @@ kt_jvm_library(
     data = [
         ":duchy_certs",
         ":edp_certs",
+        ":mc_certs",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing/testdata:static_certs",
     ],
     deps = [
