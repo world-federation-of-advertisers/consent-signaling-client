@@ -39,5 +39,3 @@ val DUCHY_1_NON_AGG_KEY_FILE = TESTDATA_DIR_PATH.resolve("non_aggregator_1.key")
 
 val DUCHY_AGG_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("aggregator.pem").toFile()
 val DUCHY_AGG_KEY_FILE = TESTDATA_DIR_PATH.resolve("aggregator.key").toFile()
-
-val KEY_ALGORITHM = "EC"
