@@ -18,10 +18,11 @@ import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.hybridencryption.HybridEncryptionMapper
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.sign
 import org.wfanet.measurement.consent.crypto.verifySignature
@@ -42,7 +43,7 @@ data class Requisition(
    * X.509 certificate in DER format which can be verified using the `DataProvider`'s root
    * certificate.
    */
-  val dataProviderCertificate: ByteString,
+  val dataProviderCertificate: X509Certificate,
   /** SHA256 hash of encrypted `RequisitionSpec`. */
   val requisitionSpecHash: ByteString
 )
@@ -51,7 +52,8 @@ data class Requisition(
  * For each EDP it receives input from:
  * 1. Independently rebuilds the requisitionFingerprint with data from Kingdom
  * 2. Verifies the EdpParticipationSignature against the fingerprint
- * 3. TODO: Check for replay attacks
+ * 3. TODO: Check for replay attacks for dataProviderParticipationSignature
+ * 4. TODO: Verify certificate chain for requisition.dataProviderCertificate
  */
 suspend fun verifyDataProviderParticipation(
   dataProviderParticipationSignature: ByteString,
@@ -64,34 +66,26 @@ suspend fun verifyDataProviderParticipation(
     requireNotNull(requisition.requisitionSpecHash)
       .concat(hashedParticipantList)
       .concat(requireNotNull(computation.measurementSpec))
-
-  // TODO: Verify Certificate Chain
-  val dataProviderX509: X509Certificate = readCertificate(requisition.dataProviderCertificate)
-
-  // TODO Verify the dataProviderSignature has not been previously reused to protect against replay
-  // attacks
-  return dataProviderX509.verifySignature(
+  return requisition.dataProviderCertificate.verifySignature(
     requisitionFingerprint,
     dataProviderParticipationSignature
   )
 }
 
 /**
- * Sign and encrypts the [measurementResult] into a serialized [SignedData] ProtoBuf. The
- * [aggregatorCertificate] is required to determine the algorithm type of the signature
+ * Signs [measurementResult] into a serialized [SignedData] ProtoBuf. The [aggregatorCertificate] is
+ * required to determine the algorithm type of the signature
  */
-suspend fun signAndEncryptResult(
-  hybridCryptor: HybridCryptor,
+suspend fun signResult(
   measurementResult: ByteString,
-  privateKeyHandle: PrivateKeyHandle,
-  aggregatorCertificate: ByteString,
-  duchyCertificate: ByteString,
-  measurementPublicKey: EncryptionPublicKey
-): ByteString {
+  /** This private key is paired with the [aggregatorCertificate] */
+  aggregatorKeyHandle: PrivateKeyHandle,
+  aggregatorCertificate: X509Certificate,
+): SignedData {
   val privateKey: PrivateKey =
-    requireNotNull(privateKeyHandle.toJavaPrivateKey(readCertificate(duchyCertificate)))
+    requireNotNull(aggregatorKeyHandle.toJavaPrivateKey(aggregatorCertificate))
   val measurementSignature =
-    privateKey.sign(certificate = readCertificate(aggregatorCertificate), data = measurementResult)
+    privateKey.sign(certificate = aggregatorCertificate, data = measurementResult)
   val signedData =
     SignedData.newBuilder()
       .apply {
@@ -99,5 +93,20 @@ suspend fun signAndEncryptResult(
         signature = measurementSignature
       }
       .build()
-  return hybridCryptor.encrypt(measurementPublicKey, ByteString.copyFrom(signedData.toByteArray()))
+  return signedData
+}
+
+/**
+ * Encrypts the [SignedData] of the measurement results using the specified [HybridCryptor]
+ * specified by the [HybridEncryptionMapper].
+ */
+suspend fun encryptResult(
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: HybridEncryptionMapper,
+  signedResult: SignedData,
+  measurementPublicKey: EncryptionPublicKey
+): ByteString {
+  val hybridCryptor: HybridCryptor =
+    hybridEncryptionMapper.getHybridCryptorForCipherSuite(cipherSuite)
+  return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
 }
