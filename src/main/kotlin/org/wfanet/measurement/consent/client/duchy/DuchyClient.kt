@@ -15,16 +15,16 @@
 package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridEncryptionMapper
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
-import org.wfanet.measurement.consent.crypto.sign
+import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 /** Fields from the computationDetails proto of the internal duchy api */
@@ -73,27 +73,20 @@ suspend fun verifyDataProviderParticipation(
 }
 
 /**
- * Signs [measurementResult] into a serialized [SignedData] ProtoBuf. The [aggregatorCertificate] is
- * required to determine the algorithm type of the signature
+ * Signs [measurementResult] into a [SignedData] ProtoBuf. The [aggregatorCertificate] is required
+ * to determine the algorithm type of the signature
  */
 suspend fun signResult(
-  measurementResult: ByteString,
+  measurementResult: MeasurementResult,
   /** This private key is paired with the [aggregatorCertificate] */
   aggregatorKeyHandle: PrivateKeyHandle,
-  aggregatorCertificate: X509Certificate,
+  aggregatorCertificate: X509Certificate
 ): SignedData {
-  val privateKey: PrivateKey =
-    requireNotNull(aggregatorKeyHandle.toJavaPrivateKey(aggregatorCertificate))
-  val measurementSignature =
-    privateKey.sign(certificate = aggregatorCertificate, data = measurementResult)
-  val signedData =
-    SignedData.newBuilder()
-      .apply {
-        data = measurementResult
-        signature = measurementSignature
-      }
-      .build()
-  return signedData
+  return signMessage<MeasurementResult>(
+    message = measurementResult,
+    privateKeyHandle = aggregatorKeyHandle,
+    certificate = aggregatorCertificate
+  )
 }
 
 /**
@@ -101,12 +94,11 @@ suspend fun signResult(
  * specified by the [HybridEncryptionMapper].
  */
 suspend fun encryptResult(
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: HybridEncryptionMapper,
   signedResult: SignedData,
-  measurementPublicKey: EncryptionPublicKey
+  measurementPublicKey: EncryptionPublicKey,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): ByteString {
-  val hybridCryptor: HybridCryptor =
-    hybridEncryptionMapper.getHybridCryptorForCipherSuite(cipherSuite)
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
   return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
 }

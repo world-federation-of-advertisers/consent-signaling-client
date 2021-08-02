@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.wfanet.measurement.consent.crypto.hybridencryption
+package org.wfanet.measurement.consent.crypto.testing
 
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 
-/** Maps cipher suites to respective hybrid cryptors. */
-interface HybridEncryptionMapper {
-  /** Maps [HybridCipherSuite] to respective [HybridCryptor]. */
-  fun getHybridCryptorForCipherSuite(cipherSuite: HybridCipherSuite): HybridCryptor
+/** Always returns [ReversingHybridCryptor] regardless of input [HybridCipherSuite]. */
+fun fakeGetHybridCryptorForCipherSuite(cipherSuite: HybridCipherSuite): HybridCryptor {
+  return ReversingHybridCryptor()
 }

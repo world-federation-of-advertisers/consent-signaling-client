@@ -17,3 +17,15 @@ kt_jvm_library(
     srcs = ["Hashing.kt"],
     deps = ["@wfa_common_jvm//imports/java/com/google/protobuf"],
 )
+
+kt_jvm_library(
+    name = "utils",
+    srcs = ["Utils.kt"],
+    deps = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
+        "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
+        "@wfa_common_jvm//imports/java/com/google/protobuf",
+    ],
+)

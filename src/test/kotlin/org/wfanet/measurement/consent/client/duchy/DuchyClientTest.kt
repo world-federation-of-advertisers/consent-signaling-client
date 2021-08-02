@@ -19,14 +19,13 @@ import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Base64
+import java.util.Random
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.whenever
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -36,9 +35,9 @@ import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridEncryptionMapper
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
+import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
@@ -111,7 +110,13 @@ class DuchyClientTest {
   fun `duchy sign result`() = runBlocking {
     val keyStore = InMemoryKeyStore()
     val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
-    val someMeasurementResult = ByteString.copyFromUtf8("some-measurement-result")
+    val someMeasurementResult =
+      MeasurementResult.newBuilder()
+        .apply {
+          reach = MeasurementResult.Reach.newBuilder().apply { value = Random().nextLong() }.build()
+          frequency = MeasurementResult.Frequency.getDefaultInstance()
+        }
+        .build()
     val aggregatorPrivateKeyHandleKey = "some arbitrary key"
     val aggregatorPrivateKey: PrivateKey =
       readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.getPublicKey().algorithm)
@@ -132,10 +137,7 @@ class DuchyClientTest {
 
 @Test
 fun `duchy encrypt result`() = runBlocking {
-  val mockHybridEncryptionMapper: HybridEncryptionMapper = mock()
   val reversingHybridCryptor = ReversingHybridCryptor()
-  whenever(mockHybridEncryptionMapper.getHybridCryptorForCipherSuite(any()))
-    .thenReturn(reversingHybridCryptor)
   val keyStore = InMemoryKeyStore()
   val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
   val someSignedMeasurementResult =
@@ -161,10 +163,10 @@ fun `duchy encrypt result`() = runBlocking {
 
   val encryptedSignedResult =
     encryptResult(
-      cipherSuite = measurementSpec.cipherSuite,
-      hybridEncryptionMapper = mockHybridEncryptionMapper,
       signedResult = someSignedMeasurementResult,
-      measurementPublicKey = measurementPublicKey
+      measurementPublicKey = measurementPublicKey,
+      cipherSuite = measurementSpec.cipherSuite,
+      hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
     )
   val decryptedSignedResult =
     SignedData.parseFrom(
