@@ -5,7 +5,7 @@ kt_jvm_test(
     srcs = ["DuchyClientTest.kt"],
     test_class = "org.wfanet.measurement.consent.client.duchy.DuchyClientTest",
     deps = [
-        "//src/main/kotlin/org/wfanet/measurement/consent/client",
+        "//src/main/kotlin/org/wfanet/measurement/consent/client/duchy",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption/testing",

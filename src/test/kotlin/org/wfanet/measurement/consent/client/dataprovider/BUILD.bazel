@@ -5,7 +5,7 @@ kt_jvm_test(
     srcs = ["DataProviderClientTest.kt"],
     test_class = "org.wfanet.measurement.consent.client.dataprovider.DataProviderClientTest",
     deps = [
-        "//src/main/kotlin/org/wfanet/measurement/consent/client",
+        "//src/main/kotlin/org/wfanet/measurement/consent/client/dataprovider",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption/testing",
