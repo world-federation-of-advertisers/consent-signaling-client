@@ -4,7 +4,7 @@ package(
     default_testonly = True,
     default_visibility = [
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption/testing:__subpackages__",
-        "//src/test/kotlin/org/wfanet/measurement/consent/crypto/keystore:__subpackages__",
+        "//src/test/kotlin/org/wfanet/measurement/consent/crypto:__subpackages__",
     ],
 )
 

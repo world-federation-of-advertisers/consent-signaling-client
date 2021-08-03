@@ -10,6 +10,18 @@ package(
 )
 
 generate_root_certificate(
+    name = "mc_1_root",
+)
+
+generate_user_certificate(
+    name = "mc_1",
+    common_name = "some-mc-1.example.com",
+    org = "Some MC 1",
+    root_certificate = ":mc_1_root.pem",
+    root_key = ":mc_1_root.key",
+)
+
+generate_root_certificate(
     name = "edp_1_root",
 )
 
@@ -58,6 +70,14 @@ generate_user_certificate(
 )
 
 filegroup(
+    name = "mc_certs",
+    srcs = [
+        "mc_1.key",
+        "mc_1.pem",
+    ],
+)
+
+filegroup(
     name = "edp_certs",
     srcs = [
         "edp_1.key",
@@ -81,6 +101,7 @@ kt_jvm_library(
     data = [
         ":duchy_certs",
         ":edp_certs",
+        ":mc_certs",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing/testdata:static_certs",
     ],
     deps = [

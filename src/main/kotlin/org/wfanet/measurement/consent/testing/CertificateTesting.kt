@@ -31,6 +31,9 @@ private val TESTDATA_DIR_PATH =
 val EDP_1_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("edp_1.pem").toFile()
 val EDP_1_KEY_FILE = TESTDATA_DIR_PATH.resolve("edp_1.key").toFile()
 
+val MC_1_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("mc_1.pem").toFile()
+val MC_1_KEY_FILE = TESTDATA_DIR_PATH.resolve("mc_1.key").toFile()
+
 val DUCHY_1_NON_AGG_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("non_aggregator_1.pem").toFile()
 val DUCHY_1_NON_AGG_KEY_FILE = TESTDATA_DIR_PATH.resolve("non_aggregator_1.key").toFile()
 

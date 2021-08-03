@@ -16,8 +16,15 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import org.wfanet.measurement.common.crypto.readCertificate
+import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
+import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hashSha256
+import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
+import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 /** Fields from the computationDetails proto of the internal duchy api */
@@ -36,7 +43,7 @@ data class Requisition(
    * X.509 certificate in DER format which can be verified using the `DataProvider`'s root
    * certificate.
    */
-  val dataProviderCertificate: ByteString,
+  val dataProviderCertificate: X509Certificate,
   /** SHA256 hash of encrypted `RequisitionSpec`. */
   val requisitionSpecHash: ByteString
 )
@@ -45,9 +52,10 @@ data class Requisition(
  * For each EDP it receives input from:
  * 1. Independently rebuilds the requisitionFingerprint with data from Kingdom
  * 2. Verifies the EdpParticipationSignature against the fingerprint
- * 3. TODO: Check for replay attacks
+ * 3. TODO: Check for replay attacks for dataProviderParticipationSignature
+ * 4. TODO: Verify certificate chain for requisition.dataProviderCertificate
  */
-fun verifyDataProviderParticipation(
+suspend fun verifyDataProviderParticipation(
   dataProviderParticipationSignature: ByteString,
   requisition: Requisition,
   computation: Computation
@@ -58,14 +66,39 @@ fun verifyDataProviderParticipation(
     requireNotNull(requisition.requisitionSpecHash)
       .concat(hashedParticipantList)
       .concat(requireNotNull(computation.measurementSpec))
-
-  // TODO: Verify Certificate Chain
-  val dataProviderX509: X509Certificate = readCertificate(requisition.dataProviderCertificate)
-
-  // TODO Verify the dataProviderSignature has not been previously reused to protect against replay
-  // attacks
-  return dataProviderX509.verifySignature(
+  return requisition.dataProviderCertificate.verifySignature(
     requisitionFingerprint,
     dataProviderParticipationSignature
   )
+}
+
+/**
+ * Signs [measurementResult] into a [SignedData] ProtoBuf. The [aggregatorCertificate] is required
+ * to determine the algorithm type of the signature
+ */
+suspend fun signResult(
+  measurementResult: MeasurementResult,
+  /** This private key is paired with the [aggregatorCertificate] */
+  aggregatorKeyHandle: PrivateKeyHandle,
+  aggregatorCertificate: X509Certificate
+): SignedData {
+  return signMessage<MeasurementResult>(
+    message = measurementResult,
+    privateKeyHandle = aggregatorKeyHandle,
+    certificate = aggregatorCertificate
+  )
+}
+
+/**
+ * Encrypts the [SignedData] of the measurement results using the specified [HybridCryptor]
+ * specified by the [HybridEncryptionMapper].
+ */
+suspend fun encryptResult(
+  signedResult: SignedData,
+  measurementPublicKey: EncryptionPublicKey,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+): ByteString {
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
 }

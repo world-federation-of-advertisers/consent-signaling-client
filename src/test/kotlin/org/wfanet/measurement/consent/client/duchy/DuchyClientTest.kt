@@ -14,24 +14,43 @@
 
 package org.wfanet.measurement.consent.client.duchy
 
+import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Base64
+import java.util.Random
 import kotlin.test.assertTrue
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
+import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
+import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
+import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
+import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
+import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
+import org.wfanet.measurement.consent.crypto.verifySignature
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 
 // TODO Switch this to real cryptography
-private val DATA_PROVIDER_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
 private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
+private val MC_X509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+private val DATA_PROVIDER_PUBLIC_KEY =
+  EncryptionPublicKey.newBuilder()
+    .apply { publicKeyInfo = ByteString.copyFromUtf8("some-public-key") }
+    .build()
 /** We use a fixed certificate so we can verify the signature against a known certificate. */
 private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
 private val SOME_REQUISITION_SPEC =
@@ -56,14 +75,14 @@ val DATA_PROVIDER_SIGNATURE =
 
 class DuchyClientTest {
 
-  val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-  val someEncryptedRequisitionSpec =
-    hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, SOME_REQUISITION_SPEC)
-  // There is no salt when hashing the encrypted requisition spec
-  val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
-
   @Test
-  fun `duchy verifies edp participation signature`() {
+  fun `duchy verifies edp participation signature`() = runBlocking {
+    /** Pre-computing values passed to duchy from kingdom */
+    val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
+    val someEncryptedRequisitionSpec =
+      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, SOME_REQUISITION_SPEC)
+    // There is no salt when hashing the encrypted requisition spec
+    val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
 
     /** Items already known to the duchy */
     val computation =
@@ -74,7 +93,7 @@ class DuchyClientTest {
       )
     val requisition =
       Requisition(
-        dataProviderCertificate = ByteString.copyFrom(DATA_PROVIDER_X509.getEncoded()),
+        dataProviderCertificate = DATA_PROVIDER_X509,
         requisitionSpecHash = someRequisitionSpecHash
       )
 
@@ -86,4 +105,72 @@ class DuchyClientTest {
       )
     )
   }
+
+  @Test
+  fun `duchy sign result`() = runBlocking {
+    val keyStore = InMemoryKeyStore()
+    val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
+    val someMeasurementResult =
+      MeasurementResult.newBuilder()
+        .apply {
+          reach = MeasurementResult.Reach.newBuilder().apply { value = Random().nextLong() }.build()
+          frequency = MeasurementResult.Frequency.getDefaultInstance()
+        }
+        .build()
+    val aggregatorPrivateKeyHandleKey = "some arbitrary key"
+    val aggregatorPrivateKey: PrivateKey =
+      readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.getPublicKey().algorithm)
+    val aggregatorPrivateKeyHandle =
+      keyStore.storePrivateKeyDer(
+        aggregatorPrivateKeyHandleKey,
+        ByteString.copyFrom(aggregatorPrivateKey.getEncoded())
+      )
+    val signedResult =
+      signResult(
+        measurementResult = someMeasurementResult,
+        aggregatorKeyHandle = aggregatorPrivateKeyHandle,
+        aggregatorCertificate = aggregatorX509,
+      )
+    assertTrue(aggregatorX509.verifySignature(signedResult))
+  }
+}
+
+@Test
+fun `duchy encrypt result`() = runBlocking {
+  val reversingHybridCryptor = ReversingHybridCryptor()
+  val keyStore = InMemoryKeyStore()
+  val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
+  val someSignedMeasurementResult =
+    SignedData.newBuilder()
+      .apply {
+        data = ByteString.copyFromUtf8("some measurement result")
+        signature = ByteString.copyFromUtf8("some measurement result signature")
+      }
+      .build()
+  val aggregatorPrivateKeyHandleKey = "some arbitrary key"
+  val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
+  val aggregatorPrivateKey: PrivateKey =
+    readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.getPublicKey().algorithm)
+  val aggregatorPrivateKeyHandle =
+    keyStore.storePrivateKeyDer(
+      aggregatorPrivateKeyHandleKey,
+      ByteString.copyFrom(aggregatorPrivateKey.getEncoded())
+    )
+  val measurementSpec =
+    MeasurementSpec.newBuilder()
+      .apply { cipherSuite = HybridCipherSuite.getDefaultInstance() }
+      .build()
+
+  val encryptedSignedResult =
+    encryptResult(
+      signedResult = someSignedMeasurementResult,
+      measurementPublicKey = measurementPublicKey,
+      cipherSuite = measurementSpec.cipherSuite,
+      hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+    )
+  val decryptedSignedResult =
+    SignedData.parseFrom(
+      reversingHybridCryptor.decrypt(aggregatorPrivateKeyHandle, encryptedSignedResult)
+    )
+  assertThat(decryptedSignedResult).isEqualTo(someSignedMeasurementResult)
 }

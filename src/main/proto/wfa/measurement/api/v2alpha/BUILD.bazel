@@ -10,13 +10,6 @@ java_proto_library(
 )
 
 java_proto_library(
-    name = "measurementv2_java_proto",
-    deps = [
-        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto",
-    ],
-)
-
-java_proto_library(
     name = "crypto_java_proto",
     deps = [
         "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:crypto_proto",
@@ -34,6 +27,13 @@ java_proto_library(
     name = "requisition_java_proto",
     deps = [
         "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:requisition_proto",
+    ],
+)
+
+java_proto_library(
+    name = "measurement_spec_java_proto",
+    deps = [
+        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_proto",
     ],
 )
 
