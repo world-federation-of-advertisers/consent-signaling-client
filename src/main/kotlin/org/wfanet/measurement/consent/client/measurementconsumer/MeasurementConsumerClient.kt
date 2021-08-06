@@ -34,26 +34,25 @@ import org.wfanet.measurement.consent.crypto.verifySignature
  * to determine the algorithm type of the signature
  */
 suspend fun signRequisitionSpec(
-  requisitionSpec: RequisitionSpec,
-  measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+    requisitionSpec: RequisitionSpec,
+    measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
+    measurementConsumerX509: ByteString
 ): SignedData {
   return signMessage<RequisitionSpec>(
-    message = requisitionSpec,
-    privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
-  )
+      message = requisitionSpec,
+      privateKeyHandle = measurementConsumerPrivateKeyHandle,
+      certificate = readCertificate(measurementConsumerX509))
 }
 
 /**
- * Encrypts the [SignedData] of the requisitionSpec using the specified [HybridCryptor]
- * specified by the [HybridEncryptionMapper].
+ * Encrypts the [SignedData] of the requisitionSpec using the specified [HybridCryptor] specified by
+ * the [HybridEncryptionMapper].
  */
 suspend fun encryptRequisitionSpec(
-  signedRequisitionSpec: SignedData,
-  measurementPublicKey: EncryptionPublicKey,
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+    signedRequisitionSpec: SignedData,
+    measurementPublicKey: EncryptionPublicKey,
+    cipherSuite: HybridCipherSuite,
+    hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): ByteString {
   val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
   return hybridCryptor.encrypt(measurementPublicKey, signedRequisitionSpec.toByteString())
@@ -64,28 +63,26 @@ suspend fun encryptRequisitionSpec(
  * to determine the algorithm type of the signature
  */
 suspend fun signMeasurementSpec(
-  measurementSpec: MeasurementSpec,
-  measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+    measurementSpec: MeasurementSpec,
+    measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
+    measurementConsumerX509: ByteString
 ): SignedData {
   return signMessage<MeasurementSpec>(
-    message = measurementSpec,
-    privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
-  )
+      message = measurementSpec,
+      privateKeyHandle = measurementConsumerPrivateKeyHandle,
+      certificate = readCertificate(measurementConsumerX509))
 }
 
 /** Signs the measurementConsumer's encryptionPublicKey. */
 suspend fun signEncryptionPublicKey(
-  encryptionPublicKey: EncryptionPublicKey,
-  privateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+    encryptionPublicKey: EncryptionPublicKey,
+    privateKeyHandle: PrivateKeyHandle,
+    measurementConsumerX509: ByteString
 ): SignedData {
   return signMessage<EncryptionPublicKey>(
-    message = encryptionPublicKey,
-    privateKeyHandle = privateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
-  )
+      message = encryptionPublicKey,
+      privateKeyHandle = privateKeyHandle,
+      certificate = readCertificate(measurementConsumerX509))
 }
 
 /**
@@ -95,12 +92,9 @@ suspend fun signEncryptionPublicKey(
  * 3. TODO: Verify certificate chain for [aggregatorCertificate]
  */
 suspend fun verifyResult(
-  resultSignature: ByteString,
-  measurementResult: MeasurementResult,
-  aggregatorCertificate: X509Certificate
+    resultSignature: ByteString,
+    measurementResult: MeasurementResult,
+    aggregatorCertificate: X509Certificate
 ): Boolean {
-  return aggregatorCertificate.verifySignature(
-    measurementResult.toByteString(),
-    resultSignature
-  )
+  return aggregatorCertificate.verifySignature(measurementResult.toByteString(), resultSignature)
 }
