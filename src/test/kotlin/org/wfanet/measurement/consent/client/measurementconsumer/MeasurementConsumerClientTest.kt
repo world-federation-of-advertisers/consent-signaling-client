@@ -62,7 +62,7 @@ class MeasurementConsumerClientTest {
   companion object {
     @BeforeClass
     @JvmStatic
-    fun setup(): Unit {
+    fun setup() {
       runBlocking {
         keyStore.storePrivateKeyDer(
           MC_PRIVATE_KEY_HANDLE_KEY,
