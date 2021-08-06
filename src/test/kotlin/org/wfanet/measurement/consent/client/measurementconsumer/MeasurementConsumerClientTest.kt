@@ -14,47 +14,167 @@
 
 package org.wfanet.measurement.consent.client.measurementconsumer
 
+import com.google.common.truth.Truth
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import org.junit.BeforeClass
 import org.junit.Test
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.Measurement
+import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
+import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
+import org.wfanet.measurement.consent.crypto.signMessage
+import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.verifySignature
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 
+private val keyStore = InMemoryKeyStore()
+private val hybridCryptor = ReversingHybridCryptor()
+
+private val FAKE_MEASUREMENT_SPEC =
+  MeasurementSpec.newBuilder()
+    .apply { cipherSuite = HybridCipherSuite.getDefaultInstance() }
+    .build()
+
+val MC_X509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
+
+val EDP_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
+
+val AGG_X509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
+const val AGG_PRIVATE_KEY_HANDLE_KEY = "agg1"
+
 class MeasurementConsumerClientTest {
+  @BeforeClass
+  fun setup() = runBlocking {
+    keyStore.storePrivateKeyDer(
+      MC_PRIVATE_KEY_HANDLE_KEY,
+      ByteString.copyFrom(readPrivateKey(MC_1_KEY_FILE, MC_X509.publicKey.algorithm).encoded)
+    )
+    keyStore.storePrivateKeyDer(
+      EDP_PRIVATE_KEY_HANDLE_KEY,
+      ByteString.copyFrom(readPrivateKey(EDP_1_KEY_FILE, EDP_X509.publicKey.algorithm).encoded)
+    )
+    keyStore.storePrivateKeyDer(
+      AGG_PRIVATE_KEY_HANDLE_KEY,
+      ByteString.copyFrom(readPrivateKey(DUCHY_AGG_KEY_FILE, AGG_X509.publicKey.algorithm).encoded)
+    )
+  }
+
   @Test
   fun `measurementConsumer sign requisitionSpec`() = runBlocking {
-    val keyStore = InMemoryKeyStore()
-    val measurementX509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
     val aRequisitionSpec =
       RequisitionSpec.newBuilder()
         .apply {
-          measurementPublicKey = EncryptionPublicKey.newBuilder().apply { publicKeyInfo = ByteString.copyFromUtf8("testPublicKey") }.build().toByteString()
-          dataProviderListHash = ByteString.copyFromUtf8("fooDataProviderListHash")
+          measurementPublicKey = EncryptionPublicKey.newBuilder()
+            .apply { publicKeyInfo = ByteString.copyFromUtf8("testPublicKey") }.build()
+            .toByteString()
+          dataProviderListHash = ByteString.copyFromUtf8("testDataProviderListHash")
         }
         .build()
-    val mcPrivateKeyHandleKey = "mc key"
-    val mcPrivateKey: PrivateKey =
-      readPrivateKey(MC_1_KEY_FILE, measurementX509.publicKey.algorithm)
-    val mcPrivateKeyHandle =
-      keyStore.storePrivateKeyDer(
-        mcPrivateKeyHandleKey,
-        ByteString.copyFrom(mcPrivateKey.encoded)
-      )
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
     val signedResult =
       signRequisitionSpec(
         requisitionSpec = aRequisitionSpec,
-        measurementConsumerPrivateKeyHandle = mcPrivateKeyHandle,
+        measurementConsumerPrivateKeyHandle = privateKeyHandle,
         measurementConsumerX509 = ByteString.readFrom(MC_1_CERT_PEM_FILE.inputStream()),
       )
-    assertTrue(measurementX509.verifySignature(signedResult))
+    assertTrue(MC_X509.verifySignature(signedResult))
+  }
+
+  @Test
+  fun `measurementConsumer encrypt requisitionSpec`() = runBlocking {
+    val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
+    val aSignedRequisitionSpec =
+      SignedData.newBuilder()
+        .apply {
+          data = ByteString.copyFromUtf8("testRequisitionSpec")
+          signature = ByteString.copyFromUtf8("testRequisitionSpecSignature")
+        }
+        .build()
+    val encryptedSignedRequisitionSpec =
+      encryptRequisitionSpec(
+        signedRequisitionSpec = aSignedRequisitionSpec,
+        measurementPublicKey = measurementPublicKey,
+        cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
+        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+      )
+
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
+    val decryptedSignedRequisitionSpec =
+      SignedData.parseFrom(
+        hybridCryptor.decrypt(privateKeyHandle, encryptedSignedRequisitionSpec)
+      )
+    Truth.assertThat(decryptedSignedRequisitionSpec).isEqualTo(aSignedRequisitionSpec)
+  }
+
+  @Test
+  fun `measurementConsumer sign measurementSpec`() = runBlocking {
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
+    val signedMeasurementSpec =
+      signMeasurementSpec(
+        measurementSpec = FAKE_MEASUREMENT_SPEC,
+        measurementConsumerPrivateKeyHandle = privateKeyHandle,
+        measurementConsumerX509 = ByteString.readFrom(MC_1_CERT_PEM_FILE.inputStream()),
+      )
+    assertTrue(MC_X509.verifySignature(signedMeasurementSpec))
+  }
+
+  @Test
+  fun `measurementConsumer sign encryptionPublicKey`() = runBlocking {
+    val mcEncryptionPublicKey = EncryptionPublicKey.newBuilder()
+      .apply { publicKeyInfo = ByteString.copyFromUtf8("testMCPublicKey") }.build()
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
+    val signedEncryptionPublicKey =
+      signEncryptionPublicKey(
+        encryptionPublicKey = mcEncryptionPublicKey,
+        privateKeyHandle = privateKeyHandle,
+        measurementConsumerX509 = ByteString.readFrom(MC_1_CERT_PEM_FILE.inputStream()),
+      )
+    assertTrue(MC_X509.verifySignature(signedEncryptionPublicKey))
+  }
+
+  @Test
+  fun `measurementConsumer verifies result`() = runBlocking {
+    val measurementResult = Measurement.Result.newBuilder()
+      .apply {
+        reach = Measurement.Result.Reach.newBuilder().apply { value = 10 }.build()
+        frequency = Measurement.Result.Frequency.newBuilder()
+          .apply { putAllRelativeFrequencyDistribution(mapOf(1L to 1.0, 2L to 2.0, 3L to 3.0)) }
+          .build()
+      }.build()
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
+    val signedResult = signMessage<Measurement.Result>(
+      message = measurementResult,
+      privateKeyHandle = privateKeyHandle,
+      certificate = AGG_X509
+    )
+
+    assertTrue(
+      verifyResult(
+        resultSignature = signedResult.signature,
+        measurementResult = measurementResult,
+        aggregatorCertificate = AGG_X509,
+      )
+    )
   }
 }
