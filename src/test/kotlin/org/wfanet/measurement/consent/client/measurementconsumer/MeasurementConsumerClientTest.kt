@@ -59,20 +59,30 @@ val AGG_X509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
 const val AGG_PRIVATE_KEY_HANDLE_KEY = "agg1"
 
 class MeasurementConsumerClientTest {
-  @BeforeClass
-  fun setup() = runBlocking {
-    keyStore.storePrivateKeyDer(
-      MC_PRIVATE_KEY_HANDLE_KEY,
-      ByteString.copyFrom(readPrivateKey(MC_1_KEY_FILE, MC_X509.publicKey.algorithm).encoded)
-    )
-    keyStore.storePrivateKeyDer(
-      EDP_PRIVATE_KEY_HANDLE_KEY,
-      ByteString.copyFrom(readPrivateKey(EDP_1_KEY_FILE, EDP_X509.publicKey.algorithm).encoded)
-    )
-    keyStore.storePrivateKeyDer(
-      AGG_PRIVATE_KEY_HANDLE_KEY,
-      ByteString.copyFrom(readPrivateKey(DUCHY_AGG_KEY_FILE, AGG_X509.publicKey.algorithm).encoded)
-    )
+  companion object {
+    @BeforeClass
+    @JvmStatic
+    fun setup(): Unit {
+      runBlocking {
+        keyStore.storePrivateKeyDer(
+          MC_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(readPrivateKey(MC_1_KEY_FILE, MC_X509.publicKey.algorithm).encoded)
+        )
+        keyStore.storePrivateKeyDer(
+          EDP_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(readPrivateKey(EDP_1_KEY_FILE, EDP_X509.publicKey.algorithm).encoded)
+        )
+        keyStore.storePrivateKeyDer(
+          AGG_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(
+              DUCHY_AGG_KEY_FILE,
+              AGG_X509.publicKey.algorithm
+            ).encoded
+          )
+        )
+      }
+    }
   }
 
   @Test
