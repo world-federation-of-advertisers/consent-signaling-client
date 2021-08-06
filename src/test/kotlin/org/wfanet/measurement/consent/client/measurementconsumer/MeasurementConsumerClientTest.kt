@@ -49,6 +49,11 @@ private val FAKE_MEASUREMENT_SPEC =
     .apply { cipherSuite = HybridCipherSuite.getDefaultInstance() }
     .build()
 
+private val FAKE_ENCRYPTION_PUBLIC_KEY =
+  EncryptionPublicKey.newBuilder()
+    .apply { publicKeyInfo = ByteString.copyFromUtf8("testPublicKey") }
+    .build()
+
 val MC_X509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
 const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
 
@@ -87,11 +92,7 @@ class MeasurementConsumerClientTest {
     val aRequisitionSpec =
       RequisitionSpec.newBuilder()
         .apply {
-          measurementPublicKey =
-            EncryptionPublicKey.newBuilder()
-              .apply { publicKeyInfo = ByteString.copyFromUtf8("testPublicKey") }
-              .build()
-              .toByteString()
+          measurementPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY.toByteString()
           dataProviderListHash = ByteString.copyFromUtf8("testDataProviderListHash")
         }
         .build()
@@ -187,6 +188,26 @@ class MeasurementConsumerClientTest {
         resultSignature = signedResult.signature,
         measurementResult = measurementResult,
         aggregatorCertificate = AGG_X509,
+      )
+    )
+  }
+
+  @Test
+  fun `measurementConsumer verifies encryption public key`() = runBlocking {
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
+    val signedEncryptionPublicKey =
+      signMessage<EncryptionPublicKey>(
+        message = FAKE_ENCRYPTION_PUBLIC_KEY,
+        privateKeyHandle = privateKeyHandle,
+        certificate = EDP_X509
+      )
+
+    assertTrue(
+      verifyEncryptionPublicKey(
+        encryptionPublicKeySignature = signedEncryptionPublicKey.signature,
+        encryptionPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY,
+        edpCertificate = EDP_X509,
       )
     )
   }

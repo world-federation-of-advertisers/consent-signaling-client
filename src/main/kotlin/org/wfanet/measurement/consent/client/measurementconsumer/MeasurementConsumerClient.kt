@@ -101,3 +101,20 @@ suspend fun verifyResult(
 ): Boolean {
   return aggregatorCertificate.verifySignature(measurementResult.toByteString(), resultSignature)
 }
+
+/**
+ * Verify the EncryptionPublicKey from the Endpoint Data Provider
+ * 1. Verifies the [encryptionPublicKey] against the [encryptionPublicKeySignature]
+ * 2. TODO: Check for replay attacks for [encryptionPublicKeySignature]
+ * 3. TODO: Verify certificate chain for [edpCertificate]
+ */
+suspend fun verifyEncryptionPublicKey(
+  encryptionPublicKeySignature: ByteString,
+  encryptionPublicKey: EncryptionPublicKey,
+  edpCertificate: X509Certificate
+): Boolean {
+  return edpCertificate.verifySignature(
+    encryptionPublicKey.toByteString(),
+    encryptionPublicKeySignature
+  )
+}
