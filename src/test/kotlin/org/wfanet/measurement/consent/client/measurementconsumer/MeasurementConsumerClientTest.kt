@@ -17,6 +17,7 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 import com.google.common.truth.Truth
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
@@ -29,6 +30,8 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.consent.client.duchy.encryptResult
+import org.wfanet.measurement.consent.client.duchy.signResult
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.signMessage
@@ -54,8 +57,20 @@ private val FAKE_ENCRYPTION_PUBLIC_KEY =
     .apply { publicKeyInfo = ByteString.copyFromUtf8("testPublicKey") }
     .build()
 
+private val FAKE_MEASUREMENT_RESULT =
+  Measurement.Result.newBuilder()
+    .apply {
+      reach = Measurement.Result.Reach.newBuilder().apply { value = 10 }.build()
+      frequency =
+        Measurement.Result.Frequency.newBuilder()
+          .apply { putAllRelativeFrequencyDistribution(mapOf(1L to 1.0, 2L to 2.0, 3L to 3.0)) }
+          .build()
+    }
+    .build()
+
 val MC_X509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
 const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
+val MC_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
 val EDP_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
 const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
@@ -163,22 +178,50 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
+  fun `measurementConsumer decrypt result`() = runBlocking {
+    val hybridCipherSuite = HybridCipherSuite.getDefaultInstance()
+    /** Encrypt a Result (as SignedData) using the Duchy Aggregator Functions */
+    val aggregatorPrivateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(aggregatorPrivateKeyHandle)
+    val signedResult = signResult(FAKE_MEASUREMENT_RESULT, aggregatorPrivateKeyHandle, AGG_X509)
+    val encryptedSignedResult =
+      encryptResult(
+        signedResult = signedResult,
+        measurementPublicKey = MC_PUBLIC_KEY,
+        cipherSuite = hybridCipherSuite,
+        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+      )
+
+    /** Decrypt the SignedData Result */
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    requireNotNull(privateKeyHandle)
+    val decryptedSignedDataResult =
+      decryptResult(
+        encryptedSignedResult,
+        privateKeyHandle,
+        hybridCipherSuite,
+        ::fakeGetHybridCryptorForCipherSuite
+      )
+    val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
+
+    assertEquals(signedResult.toByteString(), decryptedSignedDataResult.toByteString())
+    assertTrue(
+      verifyResult(
+        resultSignature = decryptedSignedDataResult.signature,
+        measurementResult = decryptedResult,
+        aggregatorCertificate = AGG_X509,
+      )
+    )
+    assertEquals(FAKE_MEASUREMENT_RESULT.reach.value, decryptedResult.reach.value)
+  }
+
+  @Test
   fun `measurementConsumer verifies result`() = runBlocking {
-    val measurementResult =
-      Measurement.Result.newBuilder()
-        .apply {
-          reach = Measurement.Result.Reach.newBuilder().apply { value = 10 }.build()
-          frequency =
-            Measurement.Result.Frequency.newBuilder()
-              .apply { putAllRelativeFrequencyDistribution(mapOf(1L to 1.0, 2L to 2.0, 3L to 3.0)) }
-              .build()
-        }
-        .build()
     val privateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
     requireNotNull(privateKeyHandle)
     val signedResult =
       signMessage<Measurement.Result>(
-        message = measurementResult,
+        message = FAKE_MEASUREMENT_RESULT,
         privateKeyHandle = privateKeyHandle,
         certificate = AGG_X509
       )
@@ -186,7 +229,7 @@ class MeasurementConsumerClientTest {
     assertTrue(
       verifyResult(
         resultSignature = signedResult.signature,
-        measurementResult = measurementResult,
+        measurementResult = FAKE_MEASUREMENT_RESULT,
         aggregatorCertificate = AGG_X509,
       )
     )

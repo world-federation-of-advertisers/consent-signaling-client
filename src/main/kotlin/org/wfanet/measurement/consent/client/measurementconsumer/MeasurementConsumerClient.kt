@@ -88,6 +88,22 @@ suspend fun signEncryptionPublicKey(
 }
 
 /**
+ * Decrypts the [encryptedSignedDataResult] of the measurement results using the specified
+ * [HybridCryptor] specified by the [HybridEncryptionMapper].
+ */
+suspend fun decryptResult(
+  encryptedSignedDataResult: ByteString,
+  measurementPrivateKeyHandle: PrivateKeyHandle,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+): SignedData {
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  return SignedData.parseFrom(
+    hybridCryptor.decrypt(measurementPrivateKeyHandle, encryptedSignedDataResult)
+  )
+}
+
+/**
  * Verify the Result from the Aggregator
  * 1. Verifies the [measurementResult] against the [resultSignature]
  * 2. TODO: Check for replay attacks for [resultSignature]
