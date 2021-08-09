@@ -102,7 +102,7 @@ class MeasurementConsumerClientTest {
       signRequisitionSpec(
         requisitionSpec = aRequisitionSpec,
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
-        measurementConsumerX509 = ByteString.readFrom(MC_1_CERT_PEM_FILE.inputStream()),
+        measurementConsumerX509 = MC_X509,
       )
     assertTrue(MC_X509.verifySignature(signedResult))
   }
@@ -140,7 +140,7 @@ class MeasurementConsumerClientTest {
       signMeasurementSpec(
         measurementSpec = FAKE_MEASUREMENT_SPEC,
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
-        measurementConsumerX509 = ByteString.readFrom(MC_1_CERT_PEM_FILE.inputStream()),
+        measurementConsumerX509 = MC_X509,
       )
     assertTrue(MC_X509.verifySignature(signedMeasurementSpec))
   }
@@ -157,7 +157,7 @@ class MeasurementConsumerClientTest {
       signEncryptionPublicKey(
         encryptionPublicKey = mcEncryptionPublicKey,
         privateKeyHandle = privateKeyHandle,
-        measurementConsumerX509 = ByteString.readFrom(MC_1_CERT_PEM_FILE.inputStream()),
+        measurementConsumerX509 = MC_X509,
       )
     assertTrue(MC_X509.verifySignature(signedEncryptionPublicKey))
   }

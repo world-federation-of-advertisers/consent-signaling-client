@@ -16,11 +16,11 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
+import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
@@ -40,7 +40,7 @@ suspend fun createParticipationSignature(
   hybridCryptor: HybridCryptor,
   requisition: Requisition,
   privateKeyHandle: PrivateKeyHandle,
-  dataProviderX509: ByteString
+  dataProviderX509: X509Certificate
 ): SignedData {
   val encryptedRequisitionSpec = requisition.encryptedRequisitionSpec
   val requisitionSpec =
@@ -51,11 +51,9 @@ suspend fun createParticipationSignature(
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  val dataProviderX509Certificate = readCertificate(dataProviderX509)
-  val privateKey: PrivateKey =
-    requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderX509Certificate))
+  val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderX509))
   val participationSignature =
-    privateKey.sign(certificate = dataProviderX509Certificate, data = requisitionFingerprint)
+    privateKey.sign(certificate = dataProviderX509, data = requisitionFingerprint)
   return SignedData.newBuilder()
     .apply {
       data = requisitionFingerprint
@@ -68,11 +66,11 @@ suspend fun createParticipationSignature(
 suspend fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   privateKeyHandle: PrivateKeyHandle,
-  dataProviderX509: ByteString
+  dataProviderX509: X509Certificate
 ): SignedData {
   return signMessage<EncryptionPublicKey>(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
-    certificate = readCertificate(dataProviderX509)
+    certificate = dataProviderX509
   )
 }

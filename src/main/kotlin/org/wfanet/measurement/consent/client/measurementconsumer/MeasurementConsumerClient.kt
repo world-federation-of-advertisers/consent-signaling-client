@@ -22,7 +22,6 @@ import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResul
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
@@ -36,12 +35,12 @@ import org.wfanet.measurement.consent.crypto.verifySignature
 suspend fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
   measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+  measurementConsumerX509: X509Certificate
 ): SignedData {
   return signMessage<RequisitionSpec>(
     message = requisitionSpec,
     privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
+    certificate = measurementConsumerX509
   )
 }
 
@@ -66,12 +65,12 @@ suspend fun encryptRequisitionSpec(
 suspend fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
   measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+  measurementConsumerX509: X509Certificate
 ): SignedData {
   return signMessage<MeasurementSpec>(
     message = measurementSpec,
     privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
+    certificate = measurementConsumerX509
   )
 }
 
@@ -79,12 +78,12 @@ suspend fun signMeasurementSpec(
 suspend fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   privateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+  measurementConsumerX509: X509Certificate
 ): SignedData {
   return signMessage<EncryptionPublicKey>(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
+    certificate = measurementConsumerX509
   )
 }
 
