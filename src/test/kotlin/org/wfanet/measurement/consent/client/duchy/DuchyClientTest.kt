@@ -32,7 +32,6 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
-import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
@@ -41,12 +40,11 @@ import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCiph
 import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
-import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 
 // TODO Switch this to real cryptography
 private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
 private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
-private val MC_X509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
 private val DATA_PROVIDER_PUBLIC_KEY =
   EncryptionPublicKey.newBuilder()
     .apply { publicKeyInfo = ByteString.copyFromUtf8("some-public-key") }
@@ -57,19 +55,19 @@ private val SOME_REQUISITION_SPEC =
   RequisitionSpec.newBuilder()
     .apply {
       dataProviderListHash =
-        hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), SOME_DATA_PROVIDER_LIST_SALT)
+        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST, SOME_DATA_PROVIDER_LIST_SALT)
     }
     .build()
     .toByteString()
 private val SOME_SERIALIZED_MEASUREMENT_SPEC =
   ByteString.copyFromUtf8("some-serialized-measurement-spec")
 /** This is pre-calculated using a fixed certificate from common-jvm. */
-val DATA_PROVIDER_SIGNATURE =
+val DATA_PROVIDER_SIGNATURE: ByteString =
   ByteString.copyFrom(
     Base64.getDecoder()
       .decode(
-        "MEQCIHs37Y61C0kPM/BiiPTU5+rDLG6NpInfQ5OZ+EG1GHUDAiAnplieJkMve3gVvRHY65cQ1vD3" +
-          "ZO2bZiiPR4LSqTPFkQ=="
+        "MEYCIQDYsRraa6oDpIsLNvAX99YbOiHOIHOXBmdikoy6OS4x6gIhANRmCKtoUD3zjGxwv/7ddl0WJ" +
+          "Dj1Pj22VkWFVFBOlrgs"
       )
   )
 
