@@ -15,21 +15,121 @@
 package org.wfanet.measurement.consent.client.measurementconsumer
 
 import com.google.protobuf.ByteString
+import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
+import org.wfanet.measurement.api.v2alpha.MeasurementSpec
+import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.common.crypto.readCertificate
+import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
+import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
+import org.wfanet.measurement.consent.crypto.verifySignature
+
+/**
+ * Signs [requisitionSpec] into a [SignedData] ProtoBuf. The [measurementConsumerX509] is required
+ * to determine the algorithm type of the signature
+ */
+suspend fun signRequisitionSpec(
+  requisitionSpec: RequisitionSpec,
+  measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
+  measurementConsumerCertificate: X509Certificate
+): SignedData {
+  return signMessage<RequisitionSpec>(
+    message = requisitionSpec,
+    privateKeyHandle = measurementConsumerPrivateKeyHandle,
+    certificate = measurementConsumerCertificate
+  )
+}
+
+/**
+ * Encrypts the [SignedData] of the requisitionSpec using the specified [HybridCryptor] specified by
+ * the [HybridEncryptionMapper].
+ */
+suspend fun encryptRequisitionSpec(
+  signedRequisitionSpec: SignedData,
+  measurementPublicKey: EncryptionPublicKey,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+): ByteString {
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  return hybridCryptor.encrypt(measurementPublicKey, signedRequisitionSpec.toByteString())
+}
+
+/**
+ * Signs [measurementSpec] into a [SignedData] ProtoBuf. The [measurementConsumerX509] is required
+ * to determine the algorithm type of the signature
+ */
+suspend fun signMeasurementSpec(
+  measurementSpec: MeasurementSpec,
+  measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
+  measurementConsumerCertificate: X509Certificate
+): SignedData {
+  return signMessage<MeasurementSpec>(
+    message = measurementSpec,
+    privateKeyHandle = measurementConsumerPrivateKeyHandle,
+    certificate = measurementConsumerCertificate
+  )
+}
 
 /** Signs the measurementConsumer's encryptionPublicKey. */
 suspend fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   privateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: ByteString
+  measurementConsumerCertificate: X509Certificate
 ): SignedData {
   return signMessage<EncryptionPublicKey>(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
-    certificate = readCertificate(measurementConsumerX509)
+    certificate = measurementConsumerCertificate
+  )
+}
+
+/**
+ * Decrypts the [encryptedSignedDataResult] of the measurement results using the specified
+ * [HybridCryptor] specified by the [HybridEncryptionMapper].
+ */
+suspend fun decryptResult(
+  encryptedSignedDataResult: ByteString,
+  measurementPrivateKeyHandle: PrivateKeyHandle,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+): SignedData {
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  return SignedData.parseFrom(
+    hybridCryptor.decrypt(measurementPrivateKeyHandle, encryptedSignedDataResult)
+  )
+}
+
+/**
+ * Verify the Result from the Aggregator
+ * 1. Verifies the [measurementResult] against the [resultSignature]
+ * 2. TODO: Check for replay attacks for [resultSignature]
+ * 3. TODO: Verify certificate chain for [aggregatorCertificate]
+ */
+suspend fun verifyResult(
+  resultSignature: ByteString,
+  measurementResult: MeasurementResult,
+  aggregatorCertificate: X509Certificate
+): Boolean {
+  return aggregatorCertificate.verifySignature(measurementResult.toByteString(), resultSignature)
+}
+
+/**
+ * Verify the EncryptionPublicKey from the Endpoint Data Provider
+ * 1. Verifies the [encryptionPublicKey] against the [encryptionPublicKeySignature]
+ * 2. TODO: Check for replay attacks for [encryptionPublicKeySignature]
+ * 3. TODO: Verify certificate chain for [edpCertificate]
+ */
+suspend fun verifyEncryptionPublicKey(
+  encryptionPublicKeySignature: ByteString,
+  encryptionPublicKey: EncryptionPublicKey,
+  edpCertificate: X509Certificate
+): Boolean {
+  return edpCertificate.verifySignature(
+    encryptionPublicKey.toByteString(),
+    encryptionPublicKeySignature
   )
 }
