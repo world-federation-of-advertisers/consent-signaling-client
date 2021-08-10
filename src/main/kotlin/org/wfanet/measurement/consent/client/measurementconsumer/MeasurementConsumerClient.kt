@@ -23,10 +23,19 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
+import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifySignature
+
+/** Create a SHA256 hash of the serialized [dataProviderList] using the [dataProviderListSalt]. */
+fun createDataProviderListHash(
+  dataProviderList: ByteString,
+  dataProviderListSalt: ByteString
+): ByteString {
+  return hashSha256(dataProviderList, dataProviderListSalt)
+}
 
 /**
  * Signs [requisitionSpec] into a [SignedData] ProtoBuf. The [measurementConsumerX509] is required
