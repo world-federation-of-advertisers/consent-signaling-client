@@ -18,6 +18,7 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.extensions.proto.ProtoTruth.assertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
@@ -32,6 +33,7 @@ import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.client.duchy.encryptResult
 import org.wfanet.measurement.consent.client.duchy.signResult
+import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.signMessage
@@ -104,6 +106,17 @@ class MeasurementConsumerClientTest {
         )
       }
     }
+  }
+
+  @Test
+  fun `createDataProviderListHash returns expect hash`() {
+    val dataProviderList = ByteString.copyFromUtf8("data provider list")
+    val dataProviderListSalt = ByteString.copyFromUtf8("salt")
+    val concatenation = dataProviderList.concat(dataProviderListSalt)
+    assertEquals(
+      createDataProviderListHash(dataProviderList, dataProviderListSalt),
+      hashSha256(concatenation)
+    )
   }
 
   @Test
