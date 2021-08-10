@@ -18,7 +18,6 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.truth.extensions.proto.ProtoTruth.assertThat as protoAssertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
@@ -218,7 +217,7 @@ class MeasurementConsumerClientTest {
         aggregatorCertificate = AGG_CERTIFICATE,
       )
     )
-    assertEquals(FAKE_MEASUREMENT_RESULT.reach.value, decryptedResult.reach.value)
+    assertThat(FAKE_MEASUREMENT_RESULT.reach.value).isEqualTo(decryptedResult.reach.value)
   }
 
   @Test
