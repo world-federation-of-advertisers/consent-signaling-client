@@ -57,19 +57,19 @@ private val SOME_REQUISITION_SPEC =
   RequisitionSpec.newBuilder()
     .apply {
       dataProviderListHash =
-        hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), SOME_DATA_PROVIDER_LIST_SALT)
+        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST, SOME_DATA_PROVIDER_LIST_SALT)
     }
     .build()
     .toByteString()
 private val SOME_SERIALIZED_MEASUREMENT_SPEC =
   ByteString.copyFromUtf8("some-serialized-measurement-spec")
 /** This is pre-calculated using a fixed certificate from common-jvm. */
-val DATA_PROVIDER_SIGNATURE =
+val DATA_PROVIDER_SIGNATURE: ByteString =
   ByteString.copyFrom(
     Base64.getDecoder()
       .decode(
-        "MEQCIHs37Y61C0kPM/BiiPTU5+rDLG6NpInfQ5OZ+EG1GHUDAiAnplieJkMve3gVvRHY65cQ1vD3" +
-          "ZO2bZiiPR4LSqTPFkQ=="
+        "MEYCIQDYsRraa6oDpIsLNvAX99YbOiHOIHOXBmdikoy6OS4x6gIhANRmCKtoUD3zjGxwv/7ddl0WJ" +
+          "Dj1Pj22VkWFVFBOlrgs"
       )
   )
 

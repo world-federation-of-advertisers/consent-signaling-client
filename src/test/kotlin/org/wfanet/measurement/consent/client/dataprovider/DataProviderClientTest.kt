@@ -37,15 +37,19 @@ import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 
-private val PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+private val PUBLIC_KEY =
+  EncryptionPublicKey.newBuilder()
+    .apply { publicKeyInfo = ByteString.copyFromUtf8("some-public-key") }
+    .build()
 private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
 private val DATA_PROVIDER_PRIVATE_KEY: PrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
 private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
+private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
 private val SOME_REQUISITION_SPEC =
   RequisitionSpec.newBuilder()
     .apply {
       dataProviderListHash =
-        hashSha256(ByteString.copyFromUtf8("some-data-provider-list"), SOME_DATA_PROVIDER_LIST_SALT)
+        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST, SOME_DATA_PROVIDER_LIST_SALT)
     }
     .build()
     .toByteString()
@@ -82,8 +86,8 @@ class DataProviderClientTest {
       )
     assertThat(Base64.getEncoder().encodeToString(dataProviderParticipation.data.toByteArray()))
       .isEqualTo(
-        "0FDiZZy02niAX0VmTcjpPbm4iiG/2xLJj2H8StnCF3xSTxQNtbAq+7iTjcxARqw5mgdEXt+tHIqDFpLOYlq" +
-          "jxHNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
+        "emmAfV6DivCZaCJDqcy1nh9Xfej/YzHOM0KuVcskfdwPkHDERRYb2Dd0CVCsKEJa5IbodPlqp" +
+          "9Yawikye4ihpXNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
       )
     assertTrue(DATA_PROVIDER_X509.verifySignature(dataProviderParticipation))
   }
