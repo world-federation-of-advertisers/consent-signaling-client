@@ -35,12 +35,12 @@ import org.wfanet.measurement.consent.crypto.verifySignature
 suspend fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
   measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: X509Certificate
+  measurementConsumerCertificate: X509Certificate
 ): SignedData {
   return signMessage<RequisitionSpec>(
     message = requisitionSpec,
     privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = measurementConsumerX509
+    certificate = measurementConsumerCertificate
   )
 }
 
@@ -65,12 +65,12 @@ suspend fun encryptRequisitionSpec(
 suspend fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
   measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: X509Certificate
+  measurementConsumerCertificate: X509Certificate
 ): SignedData {
   return signMessage<MeasurementSpec>(
     message = measurementSpec,
     privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = measurementConsumerX509
+    certificate = measurementConsumerCertificate
   )
 }
 
@@ -78,12 +78,12 @@ suspend fun signMeasurementSpec(
 suspend fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   privateKeyHandle: PrivateKeyHandle,
-  measurementConsumerX509: X509Certificate
+  measurementConsumerCertificate: X509Certificate
 ): SignedData {
   return signMessage<EncryptionPublicKey>(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
-    certificate = measurementConsumerX509
+    certificate = measurementConsumerCertificate
   )
 }
 

@@ -78,7 +78,7 @@ class DataProviderClientTest {
         hybridCryptor = hybridCryptor,
         requisition = requisition,
         privateKeyHandle = privateKeyHandle,
-        dataProviderX509 = DATA_PROVIDER_X509
+        dataProviderCertificate = DATA_PROVIDER_X509
       )
     assertThat(Base64.getEncoder().encodeToString(dataProviderParticipation.data.toByteArray()))
       .isEqualTo(

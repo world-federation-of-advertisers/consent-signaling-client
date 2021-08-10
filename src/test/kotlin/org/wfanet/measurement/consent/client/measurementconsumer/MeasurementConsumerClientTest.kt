@@ -14,7 +14,8 @@
 
 package org.wfanet.measurement.consent.client.measurementconsumer
 
-import com.google.common.truth.Truth
+import com.google.common.truth.Truth.assertThat
+import com.google.common.truth.extensions.proto.ProtoTruth.assertThat as protoAssertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import kotlin.test.assertEquals
@@ -68,34 +69,38 @@ private val FAKE_MEASUREMENT_RESULT =
     }
     .build()
 
-val MC_X509: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
 const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
 val MC_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
-val EDP_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+val EDP_CERTIFICATE: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
 const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
 
-val AGG_X509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
+val AGG_CERTIFICATE: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
 const val AGG_PRIVATE_KEY_HANDLE_KEY = "agg1"
 
 class MeasurementConsumerClientTest {
   companion object {
     @BeforeClass
     @JvmStatic
-    fun setup() {
+    fun initializePrivateKeyKeystore() {
       runBlocking {
         keyStore.storePrivateKeyDer(
           MC_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(readPrivateKey(MC_1_KEY_FILE, MC_X509.publicKey.algorithm).encoded)
+          ByteString.copyFrom(
+            readPrivateKey(MC_1_KEY_FILE, MC_CERTIFICATE.publicKey.algorithm).encoded
+          )
         )
         keyStore.storePrivateKeyDer(
           EDP_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(readPrivateKey(EDP_1_KEY_FILE, EDP_X509.publicKey.algorithm).encoded)
+          ByteString.copyFrom(
+            readPrivateKey(EDP_1_KEY_FILE, EDP_CERTIFICATE.publicKey.algorithm).encoded
+          )
         )
         keyStore.storePrivateKeyDer(
           AGG_PRIVATE_KEY_HANDLE_KEY,
           ByteString.copyFrom(
-            readPrivateKey(DUCHY_AGG_KEY_FILE, AGG_X509.publicKey.algorithm).encoded
+            readPrivateKey(DUCHY_AGG_KEY_FILE, AGG_CERTIFICATE.publicKey.algorithm).encoded
           )
         )
       }
@@ -103,8 +108,8 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `measurementConsumer sign requisitionSpec`() = runBlocking {
-    val aRequisitionSpec =
+  fun `signRequisitionSpec returns valid signature`() = runBlocking {
+    val requisitionSpec =
       RequisitionSpec.newBuilder()
         .apply {
           measurementPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY.toByteString()
@@ -112,20 +117,20 @@ class MeasurementConsumerClientTest {
         }
         .build()
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val signedResult =
       signRequisitionSpec(
-        requisitionSpec = aRequisitionSpec,
+        requisitionSpec = requisitionSpec,
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
-        measurementConsumerX509 = MC_X509,
+        measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertTrue(MC_X509.verifySignature(signedResult))
+    assertTrue(MC_CERTIFICATE.verifySignature(signedResult))
   }
 
   @Test
-  fun `measurementConsumer encrypt requisitionSpec`() = runBlocking {
+  fun `encryptRequisitionSpec returns encrypted RequisitionSpec`() = runBlocking {
     val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
-    val aSignedRequisitionSpec =
+    val signedRequisitionSpec =
       SignedData.newBuilder()
         .apply {
           data = ByteString.copyFromUtf8("testRequisitionSpec")
@@ -134,56 +139,57 @@ class MeasurementConsumerClientTest {
         .build()
     val encryptedSignedRequisitionSpec =
       encryptRequisitionSpec(
-        signedRequisitionSpec = aSignedRequisitionSpec,
+        signedRequisitionSpec = signedRequisitionSpec,
         measurementPublicKey = measurementPublicKey,
         cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
       )
 
     val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val decryptedSignedRequisitionSpec =
       SignedData.parseFrom(hybridCryptor.decrypt(privateKeyHandle, encryptedSignedRequisitionSpec))
-    Truth.assertThat(decryptedSignedRequisitionSpec).isEqualTo(aSignedRequisitionSpec)
+    assertThat(decryptedSignedRequisitionSpec).isEqualTo(signedRequisitionSpec)
   }
 
   @Test
-  fun `measurementConsumer sign measurementSpec`() = runBlocking {
+  fun `signMeasurementSpec returns valid signature`() = runBlocking {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val signedMeasurementSpec =
       signMeasurementSpec(
         measurementSpec = FAKE_MEASUREMENT_SPEC,
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
-        measurementConsumerX509 = MC_X509,
+        measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertTrue(MC_X509.verifySignature(signedMeasurementSpec))
+    assertTrue(MC_CERTIFICATE.verifySignature(signedMeasurementSpec))
   }
 
   @Test
-  fun `measurementConsumer sign encryptionPublicKey`() = runBlocking {
+  fun `signEncryptionPublicKey returns valid signature`() = runBlocking {
     val mcEncryptionPublicKey =
       EncryptionPublicKey.newBuilder()
         .apply { publicKeyInfo = ByteString.copyFromUtf8("testMCPublicKey") }
         .build()
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val signedEncryptionPublicKey =
       signEncryptionPublicKey(
         encryptionPublicKey = mcEncryptionPublicKey,
         privateKeyHandle = privateKeyHandle,
-        measurementConsumerX509 = MC_X509,
+        measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertTrue(MC_X509.verifySignature(signedEncryptionPublicKey))
+    assertTrue(MC_CERTIFICATE.verifySignature(signedEncryptionPublicKey))
   }
 
   @Test
-  fun `measurementConsumer decrypt result`() = runBlocking {
+  fun `decryptResult returns decrypted MeasurmentResult`() = runBlocking {
     val hybridCipherSuite = HybridCipherSuite.getDefaultInstance()
-    /** Encrypt a Result (as SignedData) using the Duchy Aggregator Functions */
+    // Encrypt a Result (as SignedData) using the Duchy Aggregator Functions
     val aggregatorPrivateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(aggregatorPrivateKeyHandle)
-    val signedResult = signResult(FAKE_MEASUREMENT_RESULT, aggregatorPrivateKeyHandle, AGG_X509)
+    checkNotNull(aggregatorPrivateKeyHandle)
+    val signedResult =
+      signResult(FAKE_MEASUREMENT_RESULT, aggregatorPrivateKeyHandle, AGG_CERTIFICATE)
     val encryptedSignedResult =
       encryptResult(
         signedResult = signedResult,
@@ -192,9 +198,9 @@ class MeasurementConsumerClientTest {
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
       )
 
-    /** Decrypt the SignedData Result */
+    // Decrypt the SignedData Result
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val decryptedSignedDataResult =
       decryptResult(
         encryptedSignedResult,
@@ -204,53 +210,53 @@ class MeasurementConsumerClientTest {
       )
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
-    assertEquals(signedResult.toByteString(), decryptedSignedDataResult.toByteString())
+    protoAssertThat(signedResult).isEqualTo(decryptedSignedDataResult)
     assertTrue(
       verifyResult(
         resultSignature = decryptedSignedDataResult.signature,
         measurementResult = decryptedResult,
-        aggregatorCertificate = AGG_X509,
+        aggregatorCertificate = AGG_CERTIFICATE,
       )
     )
     assertEquals(FAKE_MEASUREMENT_RESULT.reach.value, decryptedResult.reach.value)
   }
 
   @Test
-  fun `measurementConsumer verifies result`() = runBlocking {
+  fun `verifyResult verifies valid MeasurementResult signature`() = runBlocking {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val signedResult =
       signMessage<Measurement.Result>(
         message = FAKE_MEASUREMENT_RESULT,
         privateKeyHandle = privateKeyHandle,
-        certificate = AGG_X509
+        certificate = AGG_CERTIFICATE
       )
 
     assertTrue(
       verifyResult(
         resultSignature = signedResult.signature,
         measurementResult = FAKE_MEASUREMENT_RESULT,
-        aggregatorCertificate = AGG_X509,
+        aggregatorCertificate = AGG_CERTIFICATE,
       )
     )
   }
 
   @Test
-  fun `measurementConsumer verifies encryption public key`() = runBlocking {
+  fun `verifiesEncryptionPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
-    requireNotNull(privateKeyHandle)
+    checkNotNull(privateKeyHandle)
     val signedEncryptionPublicKey =
       signMessage<EncryptionPublicKey>(
         message = FAKE_ENCRYPTION_PUBLIC_KEY,
         privateKeyHandle = privateKeyHandle,
-        certificate = EDP_X509
+        certificate = EDP_CERTIFICATE
       )
 
     assertTrue(
       verifyEncryptionPublicKey(
         encryptionPublicKeySignature = signedEncryptionPublicKey.signature,
         encryptionPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY,
-        edpCertificate = EDP_X509,
+        edpCertificate = EDP_CERTIFICATE,
       )
     )
   }

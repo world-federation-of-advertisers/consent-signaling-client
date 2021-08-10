@@ -40,7 +40,7 @@ suspend fun createParticipationSignature(
   hybridCryptor: HybridCryptor,
   requisition: Requisition,
   privateKeyHandle: PrivateKeyHandle,
-  dataProviderX509: X509Certificate
+  dataProviderCertificate: X509Certificate
 ): SignedData {
   val encryptedRequisitionSpec = requisition.encryptedRequisitionSpec
   val requisitionSpec =
@@ -51,9 +51,10 @@ suspend fun createParticipationSignature(
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderX509))
+  val privateKey: PrivateKey =
+    requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderCertificate))
   val participationSignature =
-    privateKey.sign(certificate = dataProviderX509, data = requisitionFingerprint)
+    privateKey.sign(certificate = dataProviderCertificate, data = requisitionFingerprint)
   return SignedData.newBuilder()
     .apply {
       data = requisitionFingerprint
@@ -66,11 +67,11 @@ suspend fun createParticipationSignature(
 suspend fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   privateKeyHandle: PrivateKeyHandle,
-  dataProviderX509: X509Certificate
+  dataProviderCertificate: X509Certificate
 ): SignedData {
   return signMessage<EncryptionPublicKey>(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
-    certificate = dataProviderX509
+    certificate = dataProviderCertificate
   )
 }
