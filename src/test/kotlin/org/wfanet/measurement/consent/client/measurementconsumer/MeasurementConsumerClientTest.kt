@@ -15,7 +15,7 @@
 package org.wfanet.measurement.consent.client.measurementconsumer
 
 import com.google.common.truth.Truth.assertThat
-import com.google.common.truth.extensions.proto.ProtoTruth.assertThat as protoAssertThat
+import com.google.common.truth.extensions.proto.ProtoTruth.assertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import kotlin.test.assertTrue
@@ -209,7 +209,7 @@ class MeasurementConsumerClientTest {
       )
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
-    protoAssertThat(signedResult).isEqualTo(decryptedSignedDataResult)
+    assertThat(signedResult).isEqualTo(decryptedSignedDataResult)
     assertTrue(
       verifyResult(
         resultSignature = decryptedSignedDataResult.signature,
