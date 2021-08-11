@@ -32,7 +32,10 @@ class ReversingHybridCryptor : HybridCryptor {
     return reverseByteString(data)
   }
 
-  override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteString): ByteString {
+  override suspend fun decrypt(
+    privateKeyHandle: PrivateKeyHandle,
+    encryptedData: ByteString
+  ): ByteString {
     return reverseByteString(encryptedData)
   }
 }

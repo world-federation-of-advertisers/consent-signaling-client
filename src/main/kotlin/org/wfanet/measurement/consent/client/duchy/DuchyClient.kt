@@ -16,6 +16,7 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
@@ -55,7 +56,7 @@ data class Requisition(
  * 3. TODO: Check for replay attacks for dataProviderParticipationSignature
  * 4. TODO: Verify certificate chain for requisition.dataProviderCertificate
  */
-suspend fun verifyDataProviderParticipation(
+fun verifyDataProviderParticipation(
   dataProviderParticipationSignature: ByteString,
   requisition: Requisition,
   computation: Computation
@@ -82,7 +83,7 @@ suspend fun signResult(
   aggregatorKeyHandle: PrivateKeyHandle,
   aggregatorCertificate: X509Certificate
 ): SignedData {
-  return signMessage<MeasurementResult>(
+  return signMessage(
     message = measurementResult,
     privateKeyHandle = aggregatorKeyHandle,
     certificate = aggregatorCertificate
@@ -93,7 +94,7 @@ suspend fun signResult(
  * Encrypts the [SignedData] of the measurement results using the specified [HybridCryptor]
  * specified by the [HybridEncryptionMapper].
  */
-suspend fun encryptResult(
+fun encryptResult(
   signedResult: SignedData,
   measurementPublicKey: EncryptionPublicKey,
   cipherSuite: HybridCipherSuite,
@@ -101,4 +102,38 @@ suspend fun encryptResult(
 ): ByteString {
   val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
   return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
+}
+
+/**
+ * Signs [elgamalPublicKey] into a [SignedData] ProtoBuf. The [duchyCertificate] is required to
+ * determine the algorithm type of the signature
+ */
+suspend fun signElgamalPublicKey(
+  elgamalPublicKey: ElGamalPublicKey,
+  /** This private key is paired with the [duchyCertificate] */
+  duchyKeyHandle: PrivateKeyHandle,
+  duchyCertificate: X509Certificate
+): SignedData {
+  return signMessage(
+    message = elgamalPublicKey,
+    privateKeyHandle = duchyKeyHandle,
+    certificate = duchyCertificate
+  )
+}
+
+/**
+ * Verify the [elgamalPublicKeySignature] from another duchy.
+ * 1. Verifies the [elgamalPublicKey] against the [elgamalPublicKeySignature]
+ * 2. TODO: Check for replay attacks for [elgamalPublicKeySignature]
+ * 3. TODO: Verify certificate chain for [duchyCertificate]
+ */
+fun verifyElgamalPublicKey(
+  elgamalPublicKeySignature: ByteString,
+  elgamalPublicKey: ElGamalPublicKey,
+  duchyCertificate: X509Certificate
+): Boolean {
+  return duchyCertificate.verifySignature(
+    elgamalPublicKey.toByteString(),
+    elgamalPublicKeySignature
+  )
 }

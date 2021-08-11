@@ -69,7 +69,7 @@ suspend fun signEncryptionPublicKey(
   privateKeyHandle: PrivateKeyHandle,
   dataProviderCertificate: X509Certificate
 ): SignedData {
-  return signMessage<EncryptionPublicKey>(
+  return signMessage(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
     certificate = dataProviderCertificate
