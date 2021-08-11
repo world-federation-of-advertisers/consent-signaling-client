@@ -24,5 +24,5 @@ interface HybridCryptor {
   fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteString): ByteString
 
   /** Decrypts [data] using a private key stored in [privateKeyHandle] */
-  fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteString): ByteString
+  suspend fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteString): ByteString
 }
