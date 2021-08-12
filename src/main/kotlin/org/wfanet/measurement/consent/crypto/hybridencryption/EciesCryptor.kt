@@ -27,7 +27,10 @@ class EciesCryptor : HybridCryptor {
     TODO("Not yet implemented")
   }
 
-  override fun decrypt(privateKeyHandle: PrivateKeyHandle, encryptedData: ByteString): ByteString {
+  override suspend fun decrypt(
+    privateKeyHandle: PrivateKeyHandle,
+    encryptedData: ByteString
+  ): ByteString {
     TODO("Not yet implemented")
   }
 }

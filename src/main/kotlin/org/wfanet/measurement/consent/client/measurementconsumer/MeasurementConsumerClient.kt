@@ -46,7 +46,7 @@ suspend fun signRequisitionSpec(
   measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
   measurementConsumerCertificate: X509Certificate
 ): SignedData {
-  return signMessage<RequisitionSpec>(
+  return signMessage(
     message = requisitionSpec,
     privateKeyHandle = measurementConsumerPrivateKeyHandle,
     certificate = measurementConsumerCertificate
@@ -57,7 +57,7 @@ suspend fun signRequisitionSpec(
  * Encrypts the [SignedData] of the requisitionSpec using the specified [HybridCryptor] specified by
  * the [HybridEncryptionMapper].
  */
-suspend fun encryptRequisitionSpec(
+fun encryptRequisitionSpec(
   signedRequisitionSpec: SignedData,
   measurementPublicKey: EncryptionPublicKey,
   cipherSuite: HybridCipherSuite,
@@ -76,7 +76,7 @@ suspend fun signMeasurementSpec(
   measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
   measurementConsumerCertificate: X509Certificate
 ): SignedData {
-  return signMessage<MeasurementSpec>(
+  return signMessage(
     message = measurementSpec,
     privateKeyHandle = measurementConsumerPrivateKeyHandle,
     certificate = measurementConsumerCertificate
@@ -89,7 +89,7 @@ suspend fun signEncryptionPublicKey(
   privateKeyHandle: PrivateKeyHandle,
   measurementConsumerCertificate: X509Certificate
 ): SignedData {
-  return signMessage<EncryptionPublicKey>(
+  return signMessage(
     message = encryptionPublicKey,
     privateKeyHandle = privateKeyHandle,
     certificate = measurementConsumerCertificate
@@ -118,7 +118,7 @@ suspend fun decryptResult(
  * 2. TODO: Check for replay attacks for [resultSignature]
  * 3. TODO: Verify certificate chain for [aggregatorCertificate]
  */
-suspend fun verifyResult(
+fun verifyResult(
   resultSignature: ByteString,
   measurementResult: MeasurementResult,
   aggregatorCertificate: X509Certificate
@@ -132,7 +132,7 @@ suspend fun verifyResult(
  * 2. TODO: Check for replay attacks for [encryptionPublicKeySignature]
  * 3. TODO: Verify certificate chain for [edpCertificate]
  */
-suspend fun verifyEncryptionPublicKey(
+fun verifyEncryptionPublicKey(
   encryptionPublicKeySignature: ByteString,
   encryptionPublicKey: EncryptionPublicKey,
   edpCertificate: X509Certificate
