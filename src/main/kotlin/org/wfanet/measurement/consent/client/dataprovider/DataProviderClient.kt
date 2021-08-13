@@ -18,14 +18,18 @@ import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.sign
 import org.wfanet.measurement.consent.crypto.signMessage
+import org.wfanet.measurement.consent.crypto.verifySignature
 
 /**
  * Creates signature verifying EDP Participation.
@@ -74,4 +78,57 @@ suspend fun signEncryptionPublicKey(
     privateKeyHandle = privateKeyHandle,
     certificate = dataProviderCertificate
   )
+}
+
+/**
+ * Verify the MeasurementSpec from the MeasurementConsumer
+ * 1. Verifies the [measurementSpec] against the [measurementSpecSignature]
+ * 2. TODO: Check for replay attacks for [measurementSpecSignature]
+ * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
+ */
+fun verifyMeasurementSpec(
+  measurementSpecSignature: ByteString,
+  measurementSpec: MeasurementSpec,
+  measurementConsumerCertificate: X509Certificate
+): Boolean {
+  return measurementConsumerCertificate.verifySignature(
+    measurementSpec.toByteString(),
+    measurementSpecSignature
+  )
+}
+
+/**
+ * Decrypts the [encryptedSignedDataRequisitionSpec] of the requisition spec using the specified
+ * [HybridCryptor] specified by the [HybridEncryptionMapper].
+ */
+suspend fun decryptRequisitionSpec(
+  encryptedSignedDataRequisitionSpec: ByteString,
+  dataProviderPrivateKeyHandle: PrivateKeyHandle,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+): SignedData {
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  return SignedData.parseFrom(
+    hybridCryptor.decrypt(dataProviderPrivateKeyHandle, encryptedSignedDataRequisitionSpec)
+  )
+}
+
+/**
+ * Verify the RequisitionSpec from the MeasurementConsumer
+ * 1. Verifies the [requisitionSpec] against the [requisitionSpecSignature]
+ * 2. TODO: Check for replay attacks for [requisitionSpecSignature]
+ * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
+ * 4. Verifies the measurementPublicKey in requisitionSpec matches that of the corresponding
+ * measurementSpec
+ */
+fun verifyRequisitionSpec(
+  requisitionSpecSignature: ByteString,
+  requisitionSpec: RequisitionSpec,
+  measurementSpec: MeasurementSpec,
+  measurementConsumerCertificate: X509Certificate
+): Boolean {
+  return measurementConsumerCertificate.verifySignature(
+    requisitionSpec.toByteString(),
+    requisitionSpecSignature
+  ) && requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey)
 }
