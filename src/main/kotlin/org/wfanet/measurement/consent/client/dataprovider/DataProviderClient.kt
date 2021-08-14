@@ -17,6 +17,7 @@ package org.wfanet.measurement.consent.client.dataprovider
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
@@ -131,4 +132,21 @@ fun verifyRequisitionSpec(
     requisitionSpec.toByteString(),
     requisitionSpecSignature
   ) && requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey)
+}
+
+/**
+ * Verify the [elGamalPublicKeySignature] from another duchy.
+ * 1. Verifies the [elGamalPublicKey] against the [elGamalPublicKeySignature]
+ * 2. TODO: Check for replay attacks for [elGamalPublicKeySignature]
+ * 3. TODO: Verify certificate chain for [duchyCertificate]
+ */
+fun verifyElGamalPublicKey(
+  elGamalPublicKeySignature: ByteString,
+  elGamalPublicKey: ElGamalPublicKey,
+  duchyCertificate: X509Certificate
+): Boolean {
+  return duchyCertificate.verifySignature(
+    elGamalPublicKey.toByteString(),
+    elGamalPublicKeySignature
+  )
 }

@@ -131,44 +131,44 @@ class DuchyClientTest {
       )
     assertTrue(aggregatorX509.verifySignature(signedResult))
   }
-}
 
-@Test
-fun `duchy encrypt result`() = runBlocking {
-  val reversingHybridCryptor = ReversingHybridCryptor()
-  val keyStore = InMemoryKeyStore()
-  val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
-  val someSignedMeasurementResult =
-    SignedData.newBuilder()
-      .apply {
-        data = ByteString.copyFromUtf8("some measurement result")
-        signature = ByteString.copyFromUtf8("some measurement result signature")
-      }
-      .build()
-  val aggregatorPrivateKeyHandleKey = "some arbitrary key"
-  val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
-  val aggregatorPrivateKey: PrivateKey =
-    readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.getPublicKey().algorithm)
-  val aggregatorPrivateKeyHandle =
-    keyStore.storePrivateKeyDer(
-      aggregatorPrivateKeyHandleKey,
-      ByteString.copyFrom(aggregatorPrivateKey.getEncoded())
-    )
-  val measurementSpec =
-    MeasurementSpec.newBuilder()
-      .apply { cipherSuite = HybridCipherSuite.getDefaultInstance() }
-      .build()
+  @Test
+  fun `duchy encrypt result`() = runBlocking {
+    val reversingHybridCryptor = ReversingHybridCryptor()
+    val keyStore = InMemoryKeyStore()
+    val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
+    val someSignedMeasurementResult =
+      SignedData.newBuilder()
+        .apply {
+          data = ByteString.copyFromUtf8("some measurement result")
+          signature = ByteString.copyFromUtf8("some measurement result signature")
+        }
+        .build()
+    val aggregatorPrivateKeyHandleKey = "some arbitrary key"
+    val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
+    val aggregatorPrivateKey: PrivateKey =
+      readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.getPublicKey().algorithm)
+    val aggregatorPrivateKeyHandle =
+      keyStore.storePrivateKeyDer(
+        aggregatorPrivateKeyHandleKey,
+        ByteString.copyFrom(aggregatorPrivateKey.getEncoded())
+      )
+    val measurementSpec =
+      MeasurementSpec.newBuilder()
+        .apply { cipherSuite = HybridCipherSuite.getDefaultInstance() }
+        .build()
 
-  val encryptedSignedResult =
-    encryptResult(
-      signedResult = someSignedMeasurementResult,
-      measurementPublicKey = measurementPublicKey,
-      cipherSuite = measurementSpec.cipherSuite,
-      hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
-    )
-  val decryptedSignedResult =
-    SignedData.parseFrom(
-      reversingHybridCryptor.decrypt(aggregatorPrivateKeyHandle, encryptedSignedResult)
-    )
-  assertThat(decryptedSignedResult).isEqualTo(someSignedMeasurementResult)
+    val encryptedSignedResult =
+      encryptResult(
+        signedResult = someSignedMeasurementResult,
+        measurementPublicKey = measurementPublicKey,
+        cipherSuite = measurementSpec.cipherSuite,
+        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+      )
+    val decryptedSignedResult =
+      SignedData.parseFrom(
+        reversingHybridCryptor.decrypt(aggregatorPrivateKeyHandle, encryptedSignedResult)
+      )
+    assertThat(decryptedSignedResult).isEqualTo(someSignedMeasurementResult)
+  }
 }

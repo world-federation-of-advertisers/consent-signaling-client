@@ -16,59 +16,112 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Base64
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
+import org.junit.BeforeClass
 import org.junit.Test
+import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
+import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
-import org.wfanet.measurement.common.crypto.testing.KEY_ALGORITHM
+import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
+import org.wfanet.measurement.consent.client.measurementconsumer.signRequisitionSpec
 import org.wfanet.measurement.consent.crypto.hashSha256
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
+import org.wfanet.measurement.consent.crypto.signMessage
+import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.verifySignature
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 
-private val PUBLIC_KEY =
+private val MEASUREMENT_PUBLIC_KEY =
   EncryptionPublicKey.newBuilder()
     .apply { publicKeyInfo = ByteString.copyFromUtf8("some-public-key") }
     .build()
-private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
-private val DATA_PROVIDER_PRIVATE_KEY: PrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
 private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
 private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
-private val SOME_REQUISITION_SPEC =
+private val SOME_SERIALIZED_MEASUREMENT_SPEC =
+  ByteString.copyFromUtf8("some-serialized-measurement-spec")
+
+private val keyStore = InMemoryKeyStore()
+private val hybridCryptor = ReversingHybridCryptor()
+
+private val FAKE_MEASUREMENT_SPEC =
+  MeasurementSpec.newBuilder()
+    .apply {
+      cipherSuite = HybridCipherSuite.getDefaultInstance()
+      measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
+    }
+    .build()
+
+private val FAKE_REQUISITION_SPEC =
   RequisitionSpec.newBuilder()
     .apply {
       dataProviderListHash =
         hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST, SOME_DATA_PROVIDER_LIST_SALT)
+      measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
     }
     .build()
-    .toByteString()
-private val SOME_SERIALIZED_MEASUREMENT_SPEC =
-  ByteString.copyFromUtf8("some-serialized-measurement-spec")
-private val PRIVATE_KEY_HANDLE = "some arbitrary key"
+
+private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
+
+val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
+
+val EDP_CERTIFICATE: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
+val EDP_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+
+val DUCHY_CERTIFICATE: X509Certificate = readCertificate(DUCHY_1_NON_AGG_CERT_PEM_FILE)
+const val DUCHY_PRIVATE_KEY_HANDLE_KEY = "duchy1"
 
 class DataProviderClientTest {
-  val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-  val someEncryptedRequisitionSpec = hybridCryptor.encrypt(PUBLIC_KEY, SOME_REQUISITION_SPEC)
-  val keyStore = InMemoryKeyStore()
+  companion object {
+    @BeforeClass
+    @JvmStatic
+    fun initializePrivateKeyKeystore() {
+      runBlocking {
+        keyStore.storePrivateKeyDer(
+          MC_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(MC_1_KEY_FILE, MC_CERTIFICATE.publicKey.algorithm).encoded
+          )
+        )
+        keyStore.storePrivateKeyDer(
+          EDP_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(EDP_1_KEY_FILE, EDP_CERTIFICATE.publicKey.algorithm).encoded
+          )
+        )
+        keyStore.storePrivateKeyDer(
+          DUCHY_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(DUCHY_1_NON_AGG_KEY_FILE, DUCHY_CERTIFICATE.publicKey.algorithm).encoded
+          )
+        )
+      }
+    }
+  }
+
+  private val someEncryptedRequisitionSpec =
+    hybridCryptor.encrypt(MEASUREMENT_PUBLIC_KEY, FAKE_REQUISITION_SPEC.toByteString())
 
   @Test
   fun `data provider calculates requisition participation signature`() = runBlocking {
-    val privateKeyHandle =
-      keyStore.storePrivateKeyDer(
-        PRIVATE_KEY_HANDLE,
-        ByteString.copyFrom(DATA_PROVIDER_PRIVATE_KEY.getEncoded())
-      )
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
+    checkNotNull(privateKeyHandle)
     val requisition =
       Requisition.newBuilder()
         .apply {
@@ -82,13 +135,120 @@ class DataProviderClientTest {
         hybridCryptor = hybridCryptor,
         requisition = requisition,
         privateKeyHandle = privateKeyHandle,
-        dataProviderCertificate = DATA_PROVIDER_X509
+        dataProviderCertificate = EDP_CERTIFICATE
       )
     assertThat(Base64.getEncoder().encodeToString(dataProviderParticipation.data.toByteArray()))
       .isEqualTo(
-        "emmAfV6DivCZaCJDqcy1nh9Xfej/YzHOM0KuVcskfdwPkHDERRYb2Dd0CVCsKEJa5IbodPlqp" +
-          "9Yawikye4ihpXNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
+        "bnVXV7tDjYDhNP8KXXjP8PZ0Iu1fRT9/E5E1vjfDcr8PkHDERRYb2Dd0CVCsKEJa5IbodPlqp9Y" +
+          "awikye4ihpXNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
       )
-    assertTrue(DATA_PROVIDER_X509.verifySignature(dataProviderParticipation))
+    assertTrue(EDP_CERTIFICATE.verifySignature(dataProviderParticipation))
+  }
+
+  @Test
+  fun `verifyMeasurementSpec verifies valid MeasurementSpec signature`() = runBlocking {
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    checkNotNull(privateKeyHandle)
+    val signedMeasurementSpec =
+      signMessage<MeasurementSpec>(
+        message = FAKE_MEASUREMENT_SPEC,
+        privateKeyHandle = privateKeyHandle,
+        certificate = MC_CERTIFICATE
+      )
+
+    assertTrue(
+      verifyMeasurementSpec(
+        measurementSpecSignature = signedMeasurementSpec.signature,
+        measurementSpec = FAKE_MEASUREMENT_SPEC,
+        measurementConsumerCertificate = MC_CERTIFICATE,
+      )
+    )
+  }
+
+  @Test
+  fun `decryptRequistionSpec returns decrypted RequistionSpec`() = runBlocking {
+    val hybridCipherSuite = HybridCipherSuite.getDefaultInstance()
+    // Encrypt a RequisitionSpec (as SignedData) using the Measurement Consumer Functions
+    val measurementConsumerPrivateKeyHandle =
+      keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    checkNotNull(measurementConsumerPrivateKeyHandle)
+    val signedRequisitionSpec =
+      signRequisitionSpec(
+        FAKE_REQUISITION_SPEC,
+        measurementConsumerPrivateKeyHandle,
+        MC_CERTIFICATE
+      )
+    val encryptedRequisitionSpec =
+      encryptRequisitionSpec(
+        signedRequisitionSpec = signedRequisitionSpec,
+        measurementPublicKey = EDP_PUBLIC_KEY,
+        cipherSuite = hybridCipherSuite,
+        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+      )
+
+    // Decrypt the SignedData RequisitionSpec
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
+    checkNotNull(privateKeyHandle)
+    val decryptedSignedDataRequisitionSpec =
+      decryptRequisitionSpec(
+        encryptedRequisitionSpec,
+        privateKeyHandle,
+        hybridCipherSuite,
+        ::fakeGetHybridCryptorForCipherSuite
+      )
+    val decryptedRequisitionSpec =
+      RequisitionSpec.parseFrom(decryptedSignedDataRequisitionSpec.data)
+
+    assertThat(signedRequisitionSpec).isEqualTo(decryptedSignedDataRequisitionSpec)
+    assertTrue(
+      verifyRequisitionSpec(
+        requisitionSpecSignature = decryptedSignedDataRequisitionSpec.signature,
+        requisitionSpec = decryptedRequisitionSpec,
+        measurementConsumerCertificate = MC_CERTIFICATE,
+        measurementSpec = FAKE_MEASUREMENT_SPEC,
+      )
+    )
+  }
+
+  @Test
+  fun `verifyRequistionSpec verifies valid RequistionSpec signature`() = runBlocking {
+    val measurementConsumerPrivateKeyHandle =
+      keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
+    checkNotNull(measurementConsumerPrivateKeyHandle)
+    val signedRequisitionSpec =
+      signRequisitionSpec(
+        FAKE_REQUISITION_SPEC,
+        measurementConsumerPrivateKeyHandle,
+        MC_CERTIFICATE
+      )
+
+    assertTrue(
+      verifyRequisitionSpec(
+        requisitionSpecSignature = signedRequisitionSpec.signature,
+        requisitionSpec = FAKE_REQUISITION_SPEC,
+        measurementConsumerCertificate = MC_CERTIFICATE,
+        measurementSpec = FAKE_MEASUREMENT_SPEC,
+      )
+    )
+  }
+
+  @Test
+  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+    val privateKeyHandle = keyStore.getPrivateKeyHandle(DUCHY_PRIVATE_KEY_HANDLE_KEY)
+    checkNotNull(privateKeyHandle)
+    val signedElGamalPublicKey =
+      signMessage<ElGamalPublicKey>(
+        message = FAKE_EL_GAMAL_PUBLIC_KEY,
+        privateKeyHandle = privateKeyHandle,
+        certificate = DUCHY_CERTIFICATE
+      )
+
+    assertTrue(
+      verifyElGamalPublicKey(
+        elGamalPublicKeySignature = signedElGamalPublicKey.signature,
+        elGamalPublicKey = FAKE_EL_GAMAL_PUBLIC_KEY,
+        duchyCertificate = DUCHY_CERTIFICATE,
+      )
+    )
   }
 }

@@ -122,18 +122,18 @@ suspend fun signElgamalPublicKey(
 }
 
 /**
- * Verify the [elgamalPublicKeySignature] from another duchy.
- * 1. Verifies the [elgamalPublicKey] against the [elgamalPublicKeySignature]
- * 2. TODO: Check for replay attacks for [elgamalPublicKeySignature]
+ * Verify the [elGamalPublicKeySignature] from another duchy.
+ * 1. Verifies the [elGamalPublicKey] against the [elGamalPublicKeySignature]
+ * 2. TODO: Check for replay attacks for [elGamalPublicKeySignature]
  * 3. TODO: Verify certificate chain for [duchyCertificate]
  */
-fun verifyElgamalPublicKey(
-  elgamalPublicKeySignature: ByteString,
-  elgamalPublicKey: ElGamalPublicKey,
+fun verifyElGamalPublicKey(
+  elGamalPublicKeySignature: ByteString,
+  elGamalPublicKey: ElGamalPublicKey,
   duchyCertificate: X509Certificate
 ): Boolean {
   return duchyCertificate.verifySignature(
-    elgamalPublicKey.toByteString(),
-    elgamalPublicKeySignature
+    elGamalPublicKey.toByteString(),
+    elGamalPublicKeySignature
   )
 }
