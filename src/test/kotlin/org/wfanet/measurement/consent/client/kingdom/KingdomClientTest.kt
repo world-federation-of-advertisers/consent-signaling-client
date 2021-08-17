@@ -20,6 +20,8 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
@@ -45,9 +47,10 @@ private val FAKE_MEASUREMENT_SPEC =
     }
     .build()
 
-val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
-const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
+private val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+private const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
 
+@RunWith(JUnit4::class)
 class KingdomClientTest {
   companion object {
     @BeforeClass

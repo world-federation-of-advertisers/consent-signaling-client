@@ -23,11 +23,12 @@ import java.util.Random
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
-import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.readCertificate
@@ -62,7 +63,7 @@ private val SOME_REQUISITION_SPEC =
 private val SOME_SERIALIZED_MEASUREMENT_SPEC =
   ByteString.copyFromUtf8("some-serialized-measurement-spec")
 /** This is pre-calculated using a fixed certificate from common-jvm. */
-val DATA_PROVIDER_SIGNATURE: ByteString =
+private val DATA_PROVIDER_SIGNATURE: ByteString =
   ByteString.copyFrom(
     Base64.getDecoder()
       .decode(
@@ -71,8 +72,8 @@ val DATA_PROVIDER_SIGNATURE: ByteString =
       )
   )
 
+@RunWith(JUnit4::class)
 class DuchyClientTest {
-
   @Test
   fun `duchy verifies edp participation signature`() = runBlocking {
     /** Pre-computing values passed to duchy from kingdom */

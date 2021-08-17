@@ -22,6 +22,8 @@ import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
 import org.junit.Test
+import org.junit.runner.RunWith
+import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
@@ -77,16 +79,17 @@ private val FAKE_REQUISITION_SPEC =
 
 private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
 
-val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
-const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
+private val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+private const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
 
-val EDP_CERTIFICATE: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
-const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
-val EDP_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+private val EDP_CERTIFICATE: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+private const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
+private val EDP_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
-val DUCHY_CERTIFICATE: X509Certificate = readCertificate(DUCHY_1_NON_AGG_CERT_PEM_FILE)
-const val DUCHY_PRIVATE_KEY_HANDLE_KEY = "duchy1"
+private val DUCHY_CERTIFICATE: X509Certificate = readCertificate(DUCHY_1_NON_AGG_CERT_PEM_FILE)
+private const val DUCHY_PRIVATE_KEY_HANDLE_KEY = "duchy1"
 
+@RunWith(JUnit4::class)
 class DataProviderClientTest {
   companion object {
     @BeforeClass
