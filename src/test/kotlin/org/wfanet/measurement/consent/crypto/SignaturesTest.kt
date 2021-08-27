@@ -18,19 +18,37 @@ import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.wfanet.measurement.common.asBufferedFlow
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as SERVER_CERT_PEM_FILE
 import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_KEY_FILE as SERVER_KEY_FILE
 import org.wfanet.measurement.common.crypto.testing.KEY_ALGORITHM
+import org.wfanet.measurement.common.flatten
 
 private val DATA = ByteString.copyFromUtf8("I am some data to sign")
+private val LONG_DATA =
+  ByteString.copyFromUtf8("I am some data to sign. I am some data to sign. I am some data to sign.")
 private val ALT_DATA = ByteString.copyFromUtf8("I am some alternative data")
+
+// TODO: Consider migrating this to common-jvm if the underlying issue isn't solved.
+// kotlinx.coroutines.test.runBlockingTest complains about
+// "java.lang.IllegalStateException: This job has not completed yet".
+// This is a common issue: https://github.com/Kotlin/kotlinx.coroutines/issues/1204.
+fun runBlockingTest(block: suspend CoroutineScope.() -> Unit) {
+  runBlocking { block() }
+}
 
 @RunWith(JUnit4::class)
 class SignaturesTest {
@@ -46,6 +64,24 @@ class SignaturesTest {
   }
 
   @Test
+  fun `signFlow returns signature of correct size`() = runBlockingTest {
+    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+
+    val signaturePair = privateKey.signFlow(certificate, LONG_DATA.asBufferedFlow(24))
+
+    val scope = CoroutineScope(Dispatchers.Default)
+    scope.launch { signaturePair.second.await() }
+
+    val outFlowByteString = signaturePair.first.flatten()
+    assertEquals(outFlowByteString, LONG_DATA)
+
+    val signature = signaturePair.second.getCompleted()
+    // DER-encoded ECDSA signature using 256-bit key can be 70, 71, or 72 bytes.
+    assertThat(signature.size()).isIn(Range.closed(70, 72))
+  }
+
+  @Test
   fun `verifySignature returns true for valid signature`() {
     val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
     val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
@@ -55,11 +91,59 @@ class SignaturesTest {
   }
 
   @Test
+  fun `verifySignedFlow returns true for valid signed Flow`() = runBlockingTest {
+    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val signature = privateKey.sign(certificate, LONG_DATA)
+
+    val outFlow = certificate.verifySignedFlow(LONG_DATA.asBufferedFlow(24), signature)
+    assertEquals(outFlow.flatten(), LONG_DATA)
+  }
+
+  @Test
+  fun `verifySignature returns true for valid signed Flow`() = runBlockingTest {
+    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val signature = privateKey.sign(certificate, LONG_DATA)
+
+    val signaturePair = certificate.verifySignature(LONG_DATA.asBufferedFlow(24), signature)
+
+    val scope = CoroutineScope(Dispatchers.Default)
+    scope.launch { signaturePair.second.await() }
+
+    assertEquals(signaturePair.first.flatten(), LONG_DATA)
+  }
+
+  @Test
   fun `verifySignature returns false for signature from different data`() {
     val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
     val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
     val signature = privateKey.sign(certificate, DATA)
 
     assertFalse(certificate.verifySignature(ALT_DATA, signature))
+  }
+
+  @Test
+  fun `verifySignedFlow throws for invalid signed Flow`() = runBlockingTest {
+    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val signature = privateKey.sign(certificate, DATA)
+
+    val outFlow = certificate.verifySignedFlow(LONG_DATA.asBufferedFlow(24), signature)
+    assertFailsWith(IllegalArgumentException::class) { assertEquals(outFlow.flatten(), LONG_DATA) }
+  }
+
+  @Test
+  fun `verifySignature fails for invalid signed Flow`() = runBlockingTest {
+    val privateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
+    val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
+    val signature = privateKey.sign(certificate, DATA)
+
+    val signaturePair = certificate.verifySignature(LONG_DATA.asBufferedFlow(24), signature)
+    val scope = CoroutineScope(Dispatchers.Default)
+    scope.launch { signaturePair.second.await() }
+
+    assertEquals(signaturePair.first.flatten(), LONG_DATA)
+    assertFalse { signaturePair.second.getCompleted() }
   }
 }

@@ -18,6 +18,11 @@ import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.cert.X509Certificate
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.jceProvider
 
@@ -31,6 +36,25 @@ fun PrivateKey.sign(certificate: X509Certificate, data: ByteString): ByteString 
   signer.initSign(this)
   signer.update(data.asReadOnlyByteBuffer())
   return ByteString.copyFrom(signer.sign())
+}
+
+/**
+ * Signs [data] using this [PrivateKey]. Takes in a [Flow<ByteString>] for signing streaming data.
+ *
+ * @param certificate the [X509Certificate] that can be used to verify the signature
+ */
+suspend fun PrivateKey.signFlow(
+  certificate: X509Certificate,
+  data: Flow<ByteString>
+): Pair<Flow<ByteString>, Deferred<ByteString>> {
+  val signer = Signature.getInstance(certificate.sigAlgName, jceProvider)
+  val deferredSig = CompletableDeferred<ByteString>()
+  signer.initSign(this)
+  val outFlow =
+    data.onEach { signer.update(it.asReadOnlyByteBuffer()) }.onCompletion {
+      deferredSig.complete(ByteString.copyFrom(signer.sign()))
+    }
+  return outFlow to deferredSig
 }
 
 /**
@@ -49,4 +73,43 @@ fun X509Certificate.verifySignature(data: ByteString, signature: ByteString): Bo
  */
 fun X509Certificate.verifySignature(signedData: SignedData): Boolean {
   return verifySignature(signedData.data, signedData.signature)
+}
+
+/**
+ * Verifies that the [signature] for the Flow [data] was signed by the entity represented by this
+ * [X509Certificate].
+ *
+ * The output is the downstream Flow of [data]. If [data] is found to not match [signature], this
+ * will throw an IllegalArgumentException
+ */
+suspend fun X509Certificate.verifySignedFlow(
+  data: Flow<ByteString>,
+  signature: ByteString
+): Flow<ByteString> {
+  val verifier = Signature.getInstance(this.sigAlgName, jceProvider)
+
+  verifier.initVerify(this)
+  return data.onEach { verifier.update(it.asReadOnlyByteBuffer()) }.onCompletion {
+    require(verifier.verify(signature.toByteArray())) { "Data does not match provided Signature." }
+  }
+}
+
+/**
+ * Verifies that the [signature] for the Flow [data] was signed by the entity represented by this
+ * [X509Certificate].
+ *
+ * An alternative to verifySignedFlow. If [data] is found to not match [signature], this
+ * will not throw an exception, instead returning the verdict as a deferred boolean.
+ */
+suspend fun X509Certificate.verifySignature(data: Flow<ByteString>, signature: ByteString):
+  Pair<Flow<ByteString>, Deferred<Boolean>> {
+  val verifier = Signature.getInstance(this.sigAlgName, jceProvider)
+  val deferredValidation = CompletableDeferred<Boolean>()
+
+  verifier.initVerify(this)
+  val outFlow = data.onEach {
+    verifier.update(it.asReadOnlyByteBuffer())
+  }.onCompletion { deferredValidation.complete(verifier.verify(signature.toByteArray())) }
+
+  return outFlow to deferredValidation
 }
