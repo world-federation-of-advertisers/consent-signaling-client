@@ -6,6 +6,7 @@ kt_jvm_library(
     name = "signatures",
     srcs = ["Signatures.kt"],
     deps = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/exception",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
         "@wfa_common_jvm//imports/java/com/google/protobuf",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:security_provider",
