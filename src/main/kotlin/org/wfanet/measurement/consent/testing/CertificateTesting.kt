@@ -14,6 +14,7 @@
 
 package org.wfanet.measurement.consent.testing
 
+import java.io.File
 import java.nio.file.Paths
 
 private val TESTDATA_DIR_PATH =
@@ -28,14 +29,19 @@ private val TESTDATA_DIR_PATH =
     "testing",
   )
 
-val EDP_1_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("edp_1.pem").toFile()
-val EDP_1_KEY_FILE = TESTDATA_DIR_PATH.resolve("edp_1.key").toFile()
+private fun loadTestFile(filename: String): File =
+  requireNotNull(TESTDATA_DIR_PATH.resolve(filename).toFile()) {
+    "Test resource file not found: $filename"
+  }
 
-val MC_1_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("mc_1.pem").toFile()
-val MC_1_KEY_FILE = TESTDATA_DIR_PATH.resolve("mc_1.key").toFile()
+val EDP_1_CERT_PEM_FILE = loadTestFile("edp_1.pem")
+val EDP_1_KEY_FILE = loadTestFile("edp_1.key")
 
-val DUCHY_1_NON_AGG_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("non_aggregator_1.pem").toFile()
-val DUCHY_1_NON_AGG_KEY_FILE = TESTDATA_DIR_PATH.resolve("non_aggregator_1.key").toFile()
+val MC_1_CERT_PEM_FILE = loadTestFile("mc_1.pem")
+val MC_1_KEY_FILE = loadTestFile("mc_1.key")
 
-val DUCHY_AGG_CERT_PEM_FILE = TESTDATA_DIR_PATH.resolve("aggregator.pem").toFile()
-val DUCHY_AGG_KEY_FILE = TESTDATA_DIR_PATH.resolve("aggregator.key").toFile()
+val DUCHY_1_NON_AGG_CERT_PEM_FILE = loadTestFile("non_aggregator_1.pem")
+val DUCHY_1_NON_AGG_KEY_FILE = loadTestFile("non_aggregator_1.key")
+
+val DUCHY_AGG_CERT_PEM_FILE = loadTestFile("aggregator.pem")
+val DUCHY_AGG_KEY_FILE = loadTestFile("aggregator.key")

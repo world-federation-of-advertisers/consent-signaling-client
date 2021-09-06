@@ -17,6 +17,7 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
@@ -142,3 +143,16 @@ fun verifyEncryptionPublicKey(
     encryptionPublicKeySignature
   )
 }
+
+/** Verifies that the [signedExchangeWorkflow] was signed by both the entities represented by
+ * [modelProviderCertificate] and [dataProviderCertificate]
+ */
+fun verifyExchangeStepSignatures(
+  signedExchangeWorkflow: ExchangeStep.SignedExchangeWorkflow,
+  modelProviderCertificate: X509Certificate,
+  dataProviderCertificate: X509Certificate,
+): Boolean = org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures(
+  signedExchangeWorkflow,
+  modelProviderCertificate,
+  dataProviderCertificate,
+)
