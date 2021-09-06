@@ -19,6 +19,7 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
@@ -149,4 +150,22 @@ fun verifyElGamalPublicKey(
     elGamalPublicKey.toByteString(),
     elGamalPublicKeySignature
   )
+}
+
+/** Verifies that the [signedExchangeWorkflow] was signed by both the entities represented by
+ * [modelProviderCertificate] and [dataProviderCertificate]
+ */
+fun verifyExchangeStepSignatures(
+  signedExchangeWorkflow: ExchangeStep.SignedExchangeWorkflow,
+  modelProviderCertificate: X509Certificate,
+  dataProviderCertificate: X509Certificate,
+): Boolean {
+  val signedData = signedExchangeWorkflow.serializedExchangeWorkflow
+  val hasModelProviderSignature = modelProviderCertificate.verifySignature(
+    signedData, signedExchangeWorkflow.modelProviderSignature
+  )
+  val hasDataProviderSignature = dataProviderCertificate.verifySignature(
+    signedData, signedExchangeWorkflow.dataProviderSignature
+  )
+  return hasModelProviderSignature && hasDataProviderSignature
 }
