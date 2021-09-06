@@ -1,4 +1,4 @@
-load("@wfa_common_jvm//build/wfa:generate_certificate_macros.bzl", "generate_root_certificate", "generate_user_certificate")
+load("@wfa_common_jvm//build/openssl:defs.bzl", "generate_root_certificate", "generate_user_certificate")
 load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
 
 package(
@@ -11,11 +11,15 @@ package(
 
 generate_root_certificate(
     name = "mc_1_root",
+    common_name = " Some MC",
+    hostname = "ca.mc.example.com",
+    org = "Some MC Organization"
 )
 
 generate_user_certificate(
     name = "mc_1",
-    common_name = "some-mc-1.example.com",
+    common_name = "Some MC",
+    hostname = "server.mc.example.com",
     org = "Some MC 1",
     root_certificate = ":mc_1_root.pem",
     root_key = ":mc_1_root.key",
@@ -23,11 +27,15 @@ generate_user_certificate(
 
 generate_root_certificate(
     name = "edp_1_root",
+    common_name = "Some EDP",
+    hostname = "ca.edp.example.com",
+    org = "Some EDP Organization"
 )
 
 generate_user_certificate(
     name = "edp_1",
-    common_name = "some-edp-1.example.com",
+    common_name = "Some EDP",
+    hostname = "server.edp.example.com",
     org = "Some EDP 1",
     root_certificate = ":edp_1_root.pem",
     root_key = ":edp_1_root.key",
@@ -35,11 +43,15 @@ generate_user_certificate(
 
 generate_root_certificate(
     name = "aggregator_root",
+    common_name = "Some Aggregator",
+    hostname = "ca.aggregator.example.com",
+    org = "Some Aggregator Organization"
 )
 
 generate_user_certificate(
     name = "aggregator",
-    common_name = "duchy-aggregator.example.com",
+    common_name = "Duchy Aggregator",
+    hostname = "duchy-aggregator.example.com",
     org = "The Aggregator",
     root_certificate = ":aggregator_root.pem",
     root_key = ":aggregator_root.key",
@@ -47,11 +59,15 @@ generate_user_certificate(
 
 generate_root_certificate(
     name = "non_aggregator_1_root",
+    common_name = "A Duchy 1",
+    hostname = "ca.nonaggregator1.example.com",
+    org = "A Duchy 1"
 )
 
 generate_user_certificate(
     name = "non_aggregator_1",
-    common_name = "some-duchy-1.example.com",
+    common_name = "Some Non Aggregator 1",
+    hostname = "server.nonaggregator1.example.com",
     org = "A Duchy 1",
     root_certificate = ":non_aggregator_1_root.pem",
     root_key = ":non_aggregator_1_root.key",
@@ -59,12 +75,16 @@ generate_user_certificate(
 
 generate_root_certificate(
     name = "non_aggregator_2_root",
+    common_name = "A Duchy 2",
+    hostname = "ca.nonaggregator2.example.com",
+    org = "A Duchy 2"
 )
 
 generate_user_certificate(
     name = "non_aggregator_2",
-    common_name = "some-duchy-2.example.com",
-    org = "A Duchy 1",
+    common_name = "A Duchy 2",
+    hostname = "some-duchy-2.example.com",
+    org = "A Duchy 2",
     root_certificate = ":non_aggregator_2_root.pem",
     root_key = ":non_aggregator_2_root.key",
 )
@@ -106,5 +126,6 @@ kt_jvm_library(
     ],
     deps = [
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common",
+
     ],
 )

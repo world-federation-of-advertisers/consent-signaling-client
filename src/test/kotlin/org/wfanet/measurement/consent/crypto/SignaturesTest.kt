@@ -18,6 +18,7 @@ import com.google.common.collect.Range
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import kotlin.random.Random
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -27,7 +28,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.common.asBufferedFlow
+import org.wfanet.measurement.common.toByteString
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as SERVER_CERT_PEM_FILE
@@ -35,6 +38,10 @@ import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_KEY_FILE as SER
 import org.wfanet.measurement.common.crypto.testing.KEY_ALGORITHM
 import org.wfanet.measurement.common.flatten
 import org.wfanet.measurement.consent.crypto.exception.InvalidSignatureException
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 
 private val DATA = ByteString.copyFromUtf8("I am some data to sign")
 private val LONG_DATA =
@@ -124,5 +131,65 @@ class SignaturesTest {
 
     val outFlow2 = certificate.verifySignedFlow(LONG_DATA.asBufferedFlow(24), deferredSig.await())
     assertFailsWith(InvalidSignatureException::class) { outFlow2.collect() }
+  }
+
+  @Test
+  fun `verifyExchangeStepSignatures returns false for having only an MC valid signature`() {
+    val mcPrivateKey = readPrivateKey(MC_1_KEY_FILE, KEY_ALGORITHM)
+    val mcCertificate: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+    val edpCertificate: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+
+    val mcSignature = mcPrivateKey.sign(mcCertificate, DATA)
+    val exchangeWorkflow = ExchangeStep.SignedExchangeWorkflow.newBuilder()
+      .apply {
+        serializedExchangeWorkflow = DATA
+        modelProviderSignature = mcSignature
+        dataProviderSignature = randomSignature
+      }
+      .build()
+
+    assertFalse(verifyExchangeStepSignatures(exchangeWorkflow, mcCertificate, edpCertificate))
+  }
+
+  @Test
+  fun `verifyExchangeStepSignatures returns false for having only an EDP valid signature`() {
+    val edpPrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
+    val edpCertificate: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+    val mcCertificate: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+
+    val edpSignature = edpPrivateKey.sign(edpCertificate, DATA)
+    val exchangeWorkflow = ExchangeStep.SignedExchangeWorkflow.newBuilder()
+      .apply {
+        serializedExchangeWorkflow = DATA
+        modelProviderSignature = randomSignature
+        dataProviderSignature = edpSignature
+      }
+      .build()
+
+    assertFalse(verifyExchangeStepSignatures(exchangeWorkflow, mcCertificate, edpCertificate))
+  }
+
+  @Test
+  fun `verifyExchangeStepSignatures returns true when both signatures are valid`() {
+    val mcPrivateKey = readPrivateKey(MC_1_KEY_FILE, KEY_ALGORITHM)
+    val mcCertificate: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)
+    val edpPrivateKey = readPrivateKey(EDP_1_KEY_FILE, KEY_ALGORITHM)
+    val edpCertificate: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
+
+    val mcSignature = mcPrivateKey.sign(mcCertificate, DATA)
+    val edpSignature = edpPrivateKey.sign(edpCertificate, DATA)
+    val exchangeWorkflow = ExchangeStep.SignedExchangeWorkflow.newBuilder()
+      .apply {
+        serializedExchangeWorkflow = DATA
+        modelProviderSignature = mcSignature
+        dataProviderSignature = edpSignature
+      }
+      .build()
+    assertTrue(verifyExchangeStepSignatures(exchangeWorkflow, mcCertificate, edpCertificate))
+  }
+
+  companion object {
+    private val random = Random.Default
+    private val randomSignature: ByteString = random.nextBytes(70).toByteString()
   }
 }

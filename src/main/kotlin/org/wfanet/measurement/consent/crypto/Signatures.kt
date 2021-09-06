@@ -24,6 +24,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onEach
+import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.jceProvider
 import org.wfanet.measurement.consent.crypto.exception.InvalidSignatureException
@@ -99,4 +100,17 @@ fun X509Certificate.verifySignedFlow(
       throw InvalidSignatureException("Signature is invalid")
     }
   }
+}
+
+/** Verifies that the [signedExchangeWorkflow] was signed by both the entities represented by
+ * [modelProviderCertificate] and [dataProviderCertificate]
+ */
+fun verifyExchangeStepSignatures(
+  signedExchangeWorkflow: ExchangeStep.SignedExchangeWorkflow,
+  modelProviderCertificate: X509Certificate,
+  dataProviderCertificate: X509Certificate,
+): Boolean {
+  val signedData = signedExchangeWorkflow.serializedExchangeWorkflow
+  return modelProviderCertificate.verifySignature(signedData, signedExchangeWorkflow.modelProviderSignature) &&
+    dataProviderCertificate.verifySignature(signedData, signedExchangeWorkflow.dataProviderSignature)
 }
