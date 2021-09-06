@@ -165,7 +165,7 @@ switched_rules_by_language(
 # Measurement proto.
 http_archive(
     name = "wfa_measurement_proto",
-    sha256 = "12f231fe7c8f75e3170ee9c6e308d355eccc354ed60ef4505f6f537812652626",
-    strip_prefix = "cross-media-measurement-api-584b40ca7b4275d194cc4cedfb877c05ec5ab24e",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/584b40ca7b4275d194cc4cedfb877c05ec5ab24e.tar.gz",
+    sha256 = "9a4f5054f4a2b4d03ad8398436e04781f39b20f8ad13da15cbc80f21d69b888f",
+    strip_prefix = "cross-media-measurement-api-c742b249dcdcb1731899b2a8d61e9fcf1b597ca7",
+    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/c742b249dcdcb1731899b2a8d61e9fcf1b597ca7.tar.gz",
 )

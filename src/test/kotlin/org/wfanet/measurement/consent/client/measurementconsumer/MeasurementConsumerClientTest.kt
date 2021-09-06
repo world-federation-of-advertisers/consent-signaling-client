@@ -194,7 +194,7 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `decryptResult returns decrypted MeasurmentResult`() = runBlocking {
+  fun `decryptResult returns decrypted MeasurementResult`() = runBlocking {
     val hybridCipherSuite = HybridCipherSuite.getDefaultInstance()
     // Encrypt a Result (as SignedData) using the Duchy Aggregator Functions
     val aggregatorPrivateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
