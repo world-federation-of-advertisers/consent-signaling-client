@@ -44,24 +44,34 @@ import org.wfanet.measurement.consent.crypto.verifySignature
  * initially received by the data provider.
  */
 suspend fun createParticipationSignature(
-  hybridCryptor: HybridCryptor,
   requisition: Requisition,
-  privateKeyHandle: PrivateKeyHandle,
-  dataProviderCertificate: X509Certificate
+  encryptionPrivateKeyHandle: PrivateKeyHandle,
+  consentSignalingPrivateKeyHandle: PrivateKeyHandle,
+  consentSignalingCertificate: X509Certificate,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): SignedData {
-  val encryptedRequisitionSpec = requisition.encryptedRequisitionSpec
-  val requisitionSpec =
-    RequisitionSpec.parseFrom(hybridCryptor.decrypt(privateKeyHandle, encryptedRequisitionSpec))
+  val decryptedRequisitionSpec =
+    decryptRequisitionSpec(
+      requisition.encryptedRequisitionSpec,
+      encryptionPrivateKeyHandle,
+      cipherSuite,
+      hybridEncryptionMapper
+    )
   // There is no salt when hashing the encrypted requisition spec
-  val hashedEncryptedRequisitionSpec: ByteString = hashSha256(encryptedRequisitionSpec)
+  val hashedEncryptedRequisitionSpec: ByteString = hashSha256(requisition.encryptedRequisitionSpec)
+  val requisitionSpec = RequisitionSpec.parseFrom(decryptedRequisitionSpec.data)
   val requisitionFingerprint =
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  val privateKey: PrivateKey =
-    requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderCertificate))
+  val consentSignalingPrivateKey: PrivateKey =
+    requireNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
   val participationSignature =
-    privateKey.sign(certificate = dataProviderCertificate, data = requisitionFingerprint)
+    consentSignalingPrivateKey.sign(
+      certificate = consentSignalingCertificate,
+      data = requisitionFingerprint
+    )
   return SignedData.newBuilder()
     .apply {
       data = requisitionFingerprint
