@@ -43,3 +43,10 @@ java_proto_library(
         "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto",
     ],
 )
+
+java_proto_library(
+    name = "exchange_step_java_proto",
+    deps = [
+        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:exchange_step_proto",
+    ],
+)

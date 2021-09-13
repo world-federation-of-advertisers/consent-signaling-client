@@ -19,6 +19,7 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
@@ -30,6 +31,7 @@ import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.sign
 import org.wfanet.measurement.consent.crypto.signMessage
+import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as verifyExchangeStepSignaturesCommon
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 /**
@@ -150,3 +152,18 @@ fun verifyElGamalPublicKey(
     elGamalPublicKeySignature
   )
 }
+
+/**
+ * Verifies that the [signedExchangeWorkflow] was signed by both the entities represented by
+ * [modelProviderCertificate] and [dataProviderCertificate]
+ */
+fun verifyExchangeStepSignatures(
+  signedExchangeWorkflow: ExchangeStep.SignedExchangeWorkflow,
+  modelProviderCertificate: X509Certificate,
+  dataProviderCertificate: X509Certificate,
+): Boolean =
+  verifyExchangeStepSignaturesCommon(
+    signedExchangeWorkflow,
+    modelProviderCertificate,
+    dataProviderCertificate,
+  )
