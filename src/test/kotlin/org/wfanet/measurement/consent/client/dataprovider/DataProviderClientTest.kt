@@ -17,7 +17,6 @@ package org.wfanet.measurement.consent.client.dataprovider
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import java.util.Base64
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
@@ -31,6 +30,7 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
@@ -122,20 +122,22 @@ class DataProviderClientTest {
   fun `data provider calculates requisition participation signature`() = runBlocking {
     val edpPrivateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
     checkNotNull(edpPrivateKeyHandle)
+    val signedRequisitionSpec =
+      SignedData.newBuilder()
+        .apply {
+          data = FAKE_REQUISITION_SPEC.toByteString()
+          signature = ByteString.copyFromUtf8("predictable signature for testing")
+        }
+        .build()
+    val measurementPublicKey =
+      EncryptionPublicKey.parseFrom(FAKE_REQUISITION_SPEC.measurementPublicKey)
     val requisition =
       Requisition.newBuilder()
         .apply {
           encryptedRequisitionSpec =
             encryptRequisitionSpec(
-              signedRequisitionSpec =
-              SignedData.newBuilder()
-                .apply {
-                  data = FAKE_REQUISITION_SPEC.toByteString()
-                  signature = ByteString.copyFromUtf8("predictable signature for testing")
-                }
-                .build(),
-              measurementPublicKey =
-              EncryptionPublicKey.parseFrom(FAKE_REQUISITION_SPEC.measurementPublicKey),
+              signedRequisitionSpec = signedRequisitionSpec,
+              measurementPublicKey = measurementPublicKey,
               cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
               hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite,
             )
@@ -146,16 +148,18 @@ class DataProviderClientTest {
     val dataProviderParticipation: SignedData =
       createParticipationSignature(
         requisition = requisition,
-        dataProviderPrivateKeyHandle = edpPrivateKeyHandle,
-        dataProviderCertificate = EDP_CERTIFICATE,
+        decryptionPrivateKeyHandle = edpPrivateKeyHandle,
+        consentSignalingPrivateKeyHandle = edpPrivateKeyHandle,
+        consentSignalingCertificate = EDP_CERTIFICATE,
         cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite,
       )
 
-    assertThat(Base64.getEncoder().encodeToString(dataProviderParticipation.data.toByteArray()))
+    assertThat(HexString(dataProviderParticipation.data).value)
       .isEqualTo(
-        "S037LqdgBRly+juj9J8jWExjKJj7Ud2NeVsuBDvUQakPkHDERRYb2Dd0CVCsKEJa5IbodPlqp9Yawi" +
-          "kye4ihpXNvbWUtc2VyaWFsaXplZC1tZWFzdXJlbWVudC1zcGVj"
+        "4B4DFB2EA760051972FA3BA3F49F23584C632898FB51DD8D795B2E043BD441A90F9070C4451" +
+          "61BD837740950AC28425AE486E874F96AA7D61AC229327B88A1A5736F6D652D73657269616C697A656" +
+          "42D6D6561737572656D656E742D73706563"
       )
     assertTrue(EDP_CERTIFICATE.verifySignature(dataProviderParticipation))
   }
