@@ -45,16 +45,15 @@ import org.wfanet.measurement.consent.crypto.verifySignature
  */
 suspend fun createParticipationSignature(
   requisition: Requisition,
-  encryptionPrivateKeyHandle: PrivateKeyHandle,
-  consentSignalingPrivateKeyHandle: PrivateKeyHandle,
-  consentSignalingCertificate: X509Certificate,
+  dataProviderPrivateKeyHandle: PrivateKeyHandle,
+  dataProviderCertificate: X509Certificate,
   cipherSuite: HybridCipherSuite,
   hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): SignedData {
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
       requisition.encryptedRequisitionSpec,
-      encryptionPrivateKeyHandle,
+      dataProviderPrivateKeyHandle,
       cipherSuite,
       hybridEncryptionMapper
     )
@@ -65,11 +64,11 @@ suspend fun createParticipationSignature(
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  val consentSignalingPrivateKey: PrivateKey =
-    requireNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
+  val dataProviderPrivateKey: PrivateKey =
+    requireNotNull(dataProviderPrivateKeyHandle.toJavaPrivateKey(dataProviderCertificate))
   val participationSignature =
-    consentSignalingPrivateKey.sign(
-      certificate = consentSignalingCertificate,
+    dataProviderPrivateKey.sign(
+      certificate = dataProviderCertificate,
       data = requisitionFingerprint
     )
   return SignedData.newBuilder()
