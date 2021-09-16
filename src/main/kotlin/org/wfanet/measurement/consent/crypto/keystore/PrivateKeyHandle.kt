@@ -13,39 +13,14 @@
 // limitations under the License.
 package org.wfanet.measurement.consent.crypto.keystore
 
-import com.google.crypto.tink.KeysetHandle
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
-import org.wfanet.measurement.common.crypto.readPrivateKey
 
 /**
  * Clients should only know a handle to a private key, not the actual contents of the private key.
  * Therefore, only this library should read the bytes of the private key.
  */
-class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStore) {
-
-  /**
-   * Converts the [PrivateKeyHandle] into a usable [TinkKeysetHandle] object (used by TinkCrypto)
-   */
-  internal suspend fun toTinkKeysetHandle(): KeysetHandle {
-    TODO("Not yet implemented")
-  }
-
-  /**
-   * Converts a [PrivateKeyHandle] into a Java Security Private Key object. TODO update this so we
-   * don't need to expose toJavaPrivateKey to encryption/signing libraries
-   */
-  suspend fun toJavaPrivateKey(certificate: X509Certificate): PrivateKey? {
-    val internalPrivateKey = toByteString()
-    internalPrivateKey?.let {
-      return readPrivateKey(internalPrivateKey, certificate.getPublicKey().getAlgorithm())
-    }
-    return null
-  }
-
-  /** Returns [ByteString] of the private key */
-  internal suspend fun toByteString(): ByteString? {
-    return keyStore.readPrivateKey(this)
-  }
+interface PrivateKeyHandle {
+  suspend fun decrypt(encryptedBytes: ByteString): ByteString
+  suspend fun getPublicKeyHandle(): PublicKeyHandle
+  suspend fun sign(data: ByteString): ByteString
 }

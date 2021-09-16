@@ -20,10 +20,9 @@ import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hashSha256
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
+import org.wfanet.measurement.consent.crypto.keystore.PublicKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifySignature
 
@@ -90,16 +89,14 @@ suspend fun signResult(
 }
 
 /**
- * Encrypts the [SignedData] of the measurement results using the specified [HybridCryptor]
- * specified by the [HybridEncryptionMapper].
+ * Encrypts the [SignedData] of the measurement results using the specified [measurementPublicKey]
  */
-fun encryptResult(
+suspend fun encryptResult(
   signedResult: SignedData,
   measurementPublicKey: EncryptionPublicKey,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): ByteString {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
-  return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
+  return PublicKeyHandle.fromEncryptionPublicKey(measurementPublicKey)
+      .encrypt(signedResult.toByteString())
 }
 
 /**

@@ -15,12 +15,9 @@
 package org.wfanet.measurement.consent.crypto
 
 import com.google.protobuf.Message
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.consent.crypto.hybridencryption.EciesCryptor
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
 /** Generic for signing [Protobuf] messages. Used by client functions to show consent. */
@@ -30,19 +27,13 @@ suspend fun <T : Message> signMessage(
   certificate: X509Certificate,
 ): SignedData {
   val messageData = message.toByteString()
-  val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey(certificate))
-  val messageSignature = privateKey.sign(certificate = certificate, data = messageData)
+  val messageSignature = privateKeyHandle.sign(messageData)
   return SignedData.newBuilder()
     .apply {
       data = messageData
       signature = messageSignature
     }
     .build()
-}
-
-/** Maps based on kem and dem types. */
-fun getHybridCryptorForCipherSuite(): HybridCryptor {
-  return EciesCryptor()
 }
 
 /**

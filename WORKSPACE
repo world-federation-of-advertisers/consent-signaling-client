@@ -99,7 +99,7 @@ MAVEN_ARTIFACTS.update(kotlinx_coroutines_artifact_dict(version = "1.4.3"))
 MAVEN_ARTIFACTS.update({
     "com.google.api.grpc:grpc-google-cloud-pubsub-v1": "0.1.24",
     "com.google.code.gson:gson": "2.8.6",
-    "com.google.crypto.tink:tink": "1.6.0",
+    "com.google.crypto.tink:tink": "1.6.1",
     "com.google.guava:guava": "30.0-jre",
     "info.picocli:picocli": "4.4.0",
     "junit:junit": "4.13",
@@ -163,6 +163,7 @@ switched_rules_by_language(
 )
 
 # Measurement proto.
+# Common JVM for Measurement
 http_archive(
     name = "wfa_measurement_proto",
     sha256 = "1ce85f62abe07fc6921d0b6599289844ffca7b39c56cd6bd8121ada19d1c4ec2",

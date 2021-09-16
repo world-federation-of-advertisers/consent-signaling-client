@@ -25,8 +25,28 @@ kt_jvm_library(
     srcs = ["Utils.kt"],
     deps = [
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
+        "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
+        "@wfa_common_jvm//imports/java/com/google/protobuf",
+    ],
+)
+
+kt_jvm_library(
+    name = "aead",
+    srcs = ["Aead.kt", "AeadStore.kt"],
+    deps = [
+        "@wfa_common_jvm//imports/java/com/google/protobuf",
+        "@wfa_common_jvm//imports/kotlin/kotlinx/coroutines:core",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/storage:store",
+    ],
+)
+
+kt_jvm_library(
+    name = "tink",
+    srcs = ["TinkAead.kt"],
+    deps = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/crypto:aead",
+        "//imports/java/com/google/crypto/tink",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
         "@wfa_common_jvm//imports/java/com/google/protobuf",
     ],

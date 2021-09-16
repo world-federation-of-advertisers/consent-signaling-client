@@ -14,8 +14,6 @@
 
 package org.wfanet.measurement.consent.crypto.keystore
 
-import com.google.protobuf.ByteString
-
 /**
  * [KeyStore] is an abstract class for storing private keys in different implementation of KMS
  *
@@ -23,28 +21,19 @@ import com.google.protobuf.ByteString
  * [PrivateKeyHandle] of the stored key, however the client will not be enable to read the actual
  * key contents stored in KMS.
  */
-abstract class KeyStore {
+interface PrivateKeyStore {
 
   /**
    * Stores the [privateKeyBytes] at [id]
    *
    * @return [PrivateKeyHandle] representing the private key
    */
-  abstract suspend fun storePrivateKeyDer(id: String, privateKeyBytes: ByteString): PrivateKeyHandle
+  suspend fun generatePrivateKey(id: String): PrivateKeyHandle
 
   /**
    * Accesses an existing private key handle specified by [id].
    *
    * @return [PrivateKeyHandle] for the key or `null` if not found.
    */
-  abstract suspend fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
-
-  /**
-   * Accesses an existing private key specified by [privateKeyHandle]. Should only be accessed by
-   * this 'crypto' module.
-   *
-   * @return [ByteString] of the private key for a specified [privateKeyHandle] or `null` if not
-   * present.
-   */
-  abstract suspend fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString?
+  suspend fun getPrivateKeyHandle(id: String): PrivateKeyHandle?
 }
