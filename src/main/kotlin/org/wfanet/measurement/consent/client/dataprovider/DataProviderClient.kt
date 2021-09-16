@@ -35,22 +35,21 @@ import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as ver
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 /**
- * Creates signature verifying EDP Participation.
- * 1. EDP computes the RequisitionFingerprint, which is the concatenation of a. The SHA-256 hash of
- * the encrypted RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
- * 2. Signs the RequisitionFingerprint resulting in the participationSignature
+ * Process Requisition Spec will decrypt the RequistionSpec from the [requisition] and generate the
+ * RequisitionFingerprint, which is the concatenation of a. The SHA-256 hash of the encrypted
+ * RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
  *
  * We assume the signed [requisition].measurementSpec was verified when the requisition was
  * initially received by the data provider.
+ *
+ * A Pair of decrypted RequisitionSpec and RequisitionFingerprint are returned
  */
-suspend fun createParticipationSignature(
+suspend fun processRequisitionSpec(
   requisition: Requisition,
   decryptionPrivateKeyHandle: PrivateKeyHandle,
-  consentSignalingPrivateKeyHandle: PrivateKeyHandle,
-  consentSignalingCertificate: X509Certificate,
   cipherSuite: HybridCipherSuite,
   hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
-): SignedData {
+): Pair<RequisitionSpec, ByteString> {
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
       requisition.encryptedRequisitionSpec,
@@ -65,8 +64,16 @@ suspend fun createParticipationSignature(
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
+  return Pair(requisitionSpec, requisitionFingerprint)
+}
+/** Signs the RequisitionFingerprint resulting in the participationSignature */
+suspend fun signRequisitionFingerprint(
+  requisitionFingerprint: ByteString,
+  consentSignalingPrivateKeyHandle: PrivateKeyHandle,
+  consentSignalingCertificate: X509Certificate,
+): SignedData {
   val dataProviderPrivateKey: PrivateKey =
-    requireNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
+    checkNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
   val participationSignature =
     dataProviderPrivateKey.sign(
       certificate = consentSignalingCertificate,
