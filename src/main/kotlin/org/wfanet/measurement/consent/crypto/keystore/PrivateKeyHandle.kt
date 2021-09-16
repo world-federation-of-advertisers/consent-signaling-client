@@ -13,23 +13,31 @@
 // limitations under the License.
 package org.wfanet.measurement.consent.crypto.keystore
 
+import com.google.crypto.tink.CleartextKeysetHandle
 import com.google.crypto.tink.KeysetHandle
+import com.google.crypto.tink.PemKeyType
+import com.google.crypto.tink.hybrid.HybridConfig
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.consent.crypto.KeyParty
+import org.wfanet.measurement.consent.crypto.TinkDerKeysetReader
 
 /**
  * Clients should only know a handle to a private key, not the actual contents of the private key.
  * Therefore, only this library should read the bytes of the private key.
  */
 class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStore) {
-
-  /**
-   * Converts the [PrivateKeyHandle] into a usable [TinkKeysetHandle] object (used by TinkCrypto)
-   */
-  internal suspend fun toTinkKeysetHandle(): KeysetHandle {
-    TODO("Not yet implemented")
+  init {
+    HybridConfig.register()
+  }
+  /** Converts the [PrivateKeyHandle] into a usable Tink [KeysetHandle] (Private) object */
+  suspend fun toTinkKeysetHandle(): KeysetHandle {
+    val privateKey = requireNotNull(toByteString())
+    return CleartextKeysetHandle.read(
+      TinkDerKeysetReader(KeyParty.PRIVATE, privateKey, PemKeyType.ECDSA_P256_SHA256)
+    )
   }
 
   /**
@@ -39,7 +47,7 @@ class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStor
   suspend fun toJavaPrivateKey(certificate: X509Certificate): PrivateKey? {
     val internalPrivateKey = toByteString()
     internalPrivateKey?.let {
-      return readPrivateKey(internalPrivateKey, certificate.getPublicKey().getAlgorithm())
+      return readPrivateKey(internalPrivateKey, certificate.publicKey.algorithm)
     }
     return null
   }

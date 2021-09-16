@@ -31,3 +31,13 @@ kt_jvm_library(
         "@wfa_common_jvm//imports/java/com/google/protobuf",
     ],
 )
+
+kt_jvm_library(
+    name = "tink",
+    srcs = ["TinkDerKeysetReader.kt"],
+    deps = [
+        "//imports/java/com/google/crypto/tink",
+        "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
+        "@wfa_common_jvm//imports/java/com/google/protobuf",
+    ],
+)

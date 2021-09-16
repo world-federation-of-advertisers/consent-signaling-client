@@ -14,23 +14,58 @@
 
 package org.wfanet.measurement.consent.crypto.hybridencryption
 
+import com.google.crypto.tink.CleartextKeysetHandle
+import com.google.crypto.tink.HybridDecrypt
+import com.google.crypto.tink.HybridEncrypt
+import com.google.crypto.tink.PemKeyType
+import com.google.crypto.tink.hybrid.HybridConfig
 import com.google.protobuf.ByteString
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.consent.crypto.KeyParty
+import org.wfanet.measurement.consent.crypto.TinkDerKeysetReader
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
 /**
- * TODO [EciesCryptor] will be an implementation of [HybridCryptor] that uses ICIES.
+ * [EciesCryptor] in an implementation of [HybridCryptor] that uses ICIES (Tink)
  * https://en.wikipedia.org/wiki/Integrated_Encryption_Scheme
  */
 class EciesCryptor : HybridCryptor {
+  init {
+    HybridConfig.register()
+  }
+
   override fun encrypt(recipientPublicKey: EncryptionPublicKey, data: ByteString): ByteString {
-    TODO("Not yet implemented")
+    require(recipientPublicKey.type == EncryptionPublicKey.Type.EC_P256) {
+      "Only EC_P256 is currently supported"
+    }
+    val publicKeySetHandle =
+      CleartextKeysetHandle.read(
+        TinkDerKeysetReader(
+          KeyParty.PUBLIC,
+          recipientPublicKey.publicKeyInfo,
+          PemKeyType.ECDSA_P256_SHA256
+        )
+      )
+    val hybridEncrypt: HybridEncrypt = publicKeySetHandle.getPrimitive(HybridEncrypt::class.java)
+    val encryptedData =
+      hybridEncrypt.encrypt(
+        data.toByteArray(),
+        "".toByteArray() // KEJ - Should we pass in a context to be more secure?
+      )
+    return ByteString.copyFrom(encryptedData)
   }
 
   override suspend fun decrypt(
     privateKeyHandle: PrivateKeyHandle,
     encryptedData: ByteString
   ): ByteString {
-    TODO("Not yet implemented")
+    val hybridDecrypt: HybridDecrypt =
+      privateKeyHandle.toTinkKeysetHandle().getPrimitive(HybridDecrypt::class.java)
+    val decryptedData =
+      hybridDecrypt.decrypt(
+        encryptedData.toByteArray(),
+        "".toByteArray() // KEJ - Should we pass in a context to be more secure?
+      )
+    return ByteString.copyFrom(decryptedData)
   }
 }
