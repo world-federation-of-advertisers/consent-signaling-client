@@ -152,7 +152,7 @@ class DataProviderClientTest {
         cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite,
       )
-    assertThat(requisitionSpecAndFingerprint.requisitionSpec).isEqualTo(FAKE_REQUISITION_SPEC)
+    assertThat(requisitionSpecAndFingerprint.signedRequisitionSpec).isEqualTo(signedRequisitionSpec)
     assertThat(HexString(requisitionSpecAndFingerprint.requisitionFingerprint))
       .isEqualTo(
         HexString(
