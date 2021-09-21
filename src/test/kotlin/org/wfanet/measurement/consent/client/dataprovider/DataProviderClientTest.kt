@@ -145,24 +145,26 @@ class DataProviderClientTest {
             SignedData.newBuilder().apply { data = SOME_SERIALIZED_MEASUREMENT_SPEC }.build()
         }
         .build()
-    val (requisitionSpec, requistionFingerprint) =
-      processRequisitionSpec(
+    val requisitionSpecAndFingerprint =
+      decryptRequisitionSpecAndGenerateRequisitionFingerprint(
         requisition = requisition,
         decryptionPrivateKeyHandle = edpPrivateKeyHandle,
         cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite,
       )
-    assertThat(requisitionSpec).isEqualTo(FAKE_REQUISITION_SPEC)
-    assertThat(HexString(requistionFingerprint).value)
+    assertThat(requisitionSpecAndFingerprint.requisitionSpec).isEqualTo(FAKE_REQUISITION_SPEC)
+    assertThat(HexString(requisitionSpecAndFingerprint.requisitionFingerprint))
       .isEqualTo(
-        "4B4DFB2EA760051972FA3BA3F49F23584C632898FB51DD8D795B2E043BD441A90F9070C4451" +
-          "61BD837740950AC28425AE486E874F96AA7D61AC229327B88A1A5736F6D652D73657269616C697A656" +
-          "42D6D6561737572656D656E742D73706563"
+        HexString(
+          "4B4DFB2EA760051972FA3BA3F49F23584C632898FB51DD8D795B2E043BD441A90F9070C4451" +
+            "61BD837740950AC28425AE486E874F96AA7D61AC229327B88A1A5736F6D652D73657269616C697A656" +
+            "42D6D6561737572656D656E742D73706563"
+        )
       )
 
     val dataProviderParticipation =
       signRequisitionFingerprint(
-        requisitionFingerprint = requistionFingerprint,
+        requisitionFingerprint = requisitionSpecAndFingerprint.requisitionFingerprint,
         consentSignalingPrivateKeyHandle = edpPrivateKeyHandle,
         consentSignalingCertificate = EDP_CERTIFICATE,
       )

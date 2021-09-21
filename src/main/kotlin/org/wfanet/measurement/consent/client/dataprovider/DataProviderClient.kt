@@ -34,22 +34,30 @@ import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as verifyExchangeStepSignaturesCommon
 import org.wfanet.measurement.consent.crypto.verifySignature
 
+data class RequisitionSpecAndFingerprint(
+  /** Decrypted RequisitionSpec */
+  val requisitionSpec: RequisitionSpec,
+  /** Generated Requisition Fingerprint */
+  val requisitionFingerprint: ByteString,
+)
 /**
- * Process Requisition Spec will decrypt the RequistionSpec from the [requisition] and generate the
- * RequisitionFingerprint, which is the concatenation of a. The SHA-256 hash of the encrypted
+ * Decrypts the RequisitionSpec from the [requisition] and generates the RequisitionFingerprint
+ *
+ * A RequisitionFingerprint is the concatenation of a. The SHA-256 hash of the encrypted
  * RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
  *
  * We assume the signed [requisition].measurementSpec was verified when the requisition was
  * initially received by the data provider.
  *
- * A Pair of decrypted RequisitionSpec and RequisitionFingerprint are returned
+ * @return a [RequisitionSpecAndFingerprint] containing the decrypted RequisitionSpec and generated
+ * RequisitionFingerprint
  */
-suspend fun processRequisitionSpec(
+suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
   requisition: Requisition,
   decryptionPrivateKeyHandle: PrivateKeyHandle,
   cipherSuite: HybridCipherSuite,
   hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
-): Pair<RequisitionSpec, ByteString> {
+): RequisitionSpecAndFingerprint {
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
       requisition.encryptedRequisitionSpec,
@@ -64,8 +72,9 @@ suspend fun processRequisitionSpec(
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  return Pair(requisitionSpec, requisitionFingerprint)
+  return RequisitionSpecAndFingerprint(requisitionSpec, requisitionFingerprint)
 }
+
 /** Signs the RequisitionFingerprint resulting in the participationSignature */
 suspend fun signRequisitionFingerprint(
   requisitionFingerprint: ByteString,
