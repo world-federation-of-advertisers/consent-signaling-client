@@ -34,34 +34,60 @@ import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as verifyExchangeStepSignaturesCommon
 import org.wfanet.measurement.consent.crypto.verifySignature
 
+data class RequisitionSpecAndFingerprint(
+  /** Decrypted RequisitionSpec */
+  val requisitionSpec: RequisitionSpec,
+  /** Generated Requisition Fingerprint */
+  val requisitionFingerprint: ByteString,
+)
 /**
- * Creates signature verifying EDP Participation.
- * 1. EDP computes the RequisitionFingerprint, which is the concatenation of a. The SHA-256 hash of
- * the encrypted RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
- * 2. Signs the RequisitionFingerprint resulting in the participationSignature
+ * Decrypts the RequisitionSpec from the [requisition] and generates the RequisitionFingerprint
+ *
+ * A RequisitionFingerprint is the concatenation of a. The SHA-256 hash of the encrypted
+ * RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
  *
  * We assume the signed [requisition].measurementSpec was verified when the requisition was
  * initially received by the data provider.
+ *
+ * @return a [RequisitionSpecAndFingerprint] containing the decrypted RequisitionSpec and generated
+ * RequisitionFingerprint
  */
-suspend fun createParticipationSignature(
-  hybridCryptor: HybridCryptor,
+suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
   requisition: Requisition,
-  privateKeyHandle: PrivateKeyHandle,
-  dataProviderCertificate: X509Certificate
-): SignedData {
-  val encryptedRequisitionSpec = requisition.encryptedRequisitionSpec
-  val requisitionSpec =
-    RequisitionSpec.parseFrom(hybridCryptor.decrypt(privateKeyHandle, encryptedRequisitionSpec))
+  decryptionPrivateKeyHandle: PrivateKeyHandle,
+  cipherSuite: HybridCipherSuite,
+  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+): RequisitionSpecAndFingerprint {
+  val decryptedRequisitionSpec =
+    decryptRequisitionSpec(
+      requisition.encryptedRequisitionSpec,
+      decryptionPrivateKeyHandle,
+      cipherSuite,
+      hybridEncryptionMapper
+    )
   // There is no salt when hashing the encrypted requisition spec
-  val hashedEncryptedRequisitionSpec: ByteString = hashSha256(encryptedRequisitionSpec)
+  val hashedEncryptedRequisitionSpec: ByteString = hashSha256(requisition.encryptedRequisitionSpec)
+  val requisitionSpec = RequisitionSpec.parseFrom(decryptedRequisitionSpec.data)
   val requisitionFingerprint =
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  val privateKey: PrivateKey =
-    requireNotNull(privateKeyHandle.toJavaPrivateKey(dataProviderCertificate))
+  return RequisitionSpecAndFingerprint(requisitionSpec, requisitionFingerprint)
+}
+
+/** Signs the RequisitionFingerprint resulting in the participationSignature */
+suspend fun signRequisitionFingerprint(
+  requisitionFingerprint: ByteString,
+  consentSignalingPrivateKeyHandle: PrivateKeyHandle,
+  consentSignalingCertificate: X509Certificate,
+): SignedData {
+  val dataProviderPrivateKey: PrivateKey =
+    checkNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
   val participationSignature =
-    privateKey.sign(certificate = dataProviderCertificate, data = requisitionFingerprint)
+    dataProviderPrivateKey.sign(
+      certificate = consentSignalingCertificate,
+      data = requisitionFingerprint
+    )
   return SignedData.newBuilder()
     .apply {
       data = requisitionFingerprint
