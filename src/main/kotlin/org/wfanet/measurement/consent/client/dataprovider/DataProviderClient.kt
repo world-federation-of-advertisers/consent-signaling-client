@@ -35,8 +35,8 @@ import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as ver
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 data class RequisitionSpecAndFingerprint(
-  /** Decrypted RequisitionSpec */
-  val requisitionSpec: RequisitionSpec,
+  /** Decrypted Signed RequisitionSpec */
+  val signedRequisitionSpec: SignedData,
   /** Generated Requisition Fingerprint */
   val requisitionFingerprint: ByteString,
 )
@@ -72,7 +72,7 @@ suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
     hashedEncryptedRequisitionSpec
       .concat(requireNotNull(requisitionSpec.dataProviderListHash))
       .concat(requireNotNull(requisition.measurementSpec.data))
-  return RequisitionSpecAndFingerprint(requisitionSpec, requisitionFingerprint)
+  return RequisitionSpecAndFingerprint(decryptedRequisitionSpec, requisitionFingerprint)
 }
 
 /** Signs the RequisitionFingerprint resulting in the participationSignature */
