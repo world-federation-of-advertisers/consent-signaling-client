@@ -14,11 +14,10 @@
 
 package org.wfanet.measurement.consent.crypto.testing
 
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 
 /** Always returns [ReversingHybridCryptor] regardless of input [HybridCipherSuite]. */
-fun fakeGetHybridCryptorForCipherSuite(cipherSuite: HybridCipherSuite): HybridCryptor {
+fun fakeGetHybridCryptorForCipherSuite(): HybridCryptor {
   return ReversingHybridCryptor()
 }

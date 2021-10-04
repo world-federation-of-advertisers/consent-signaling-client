@@ -18,7 +18,6 @@ import com.google.protobuf.Message
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ExchangeStep
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.consent.crypto.hybridencryption.EciesCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
@@ -42,14 +41,8 @@ suspend fun <T : Message> signMessage(
 }
 
 /** Maps based on kem and dem types. */
-fun getHybridCryptorForCipherSuite(cipherSuite: HybridCipherSuite): HybridCryptor {
-  return when (Pair(cipherSuite.kem, cipherSuite.dem)) {
-    Pair(
-      HybridCipherSuite.KeyEncapsulationMechanism.ECDH_P256_HKDF_HMAC_SHA256,
-      HybridCipherSuite.DataEncapsulationMechanism.AES_128_GCM
-    ) -> EciesCryptor()
-    else -> throw IllegalArgumentException("Unsupported cipher suite")
-  }
+fun getHybridCryptorForCipherSuite(): HybridCryptor {
+  return EciesCryptor()
 }
 
 /**

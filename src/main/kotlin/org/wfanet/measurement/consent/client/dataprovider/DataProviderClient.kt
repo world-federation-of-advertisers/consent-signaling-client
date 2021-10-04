@@ -17,10 +17,10 @@ package org.wfanet.measurement.consent.client.dataprovider
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import kotlin.reflect.KFunction0
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.ExchangeStep
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -55,14 +55,12 @@ data class RequisitionSpecAndFingerprint(
 suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
   requisition: Requisition,
   decryptionPrivateKeyHandle: PrivateKeyHandle,
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
 ): RequisitionSpecAndFingerprint {
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
       requisition.encryptedRequisitionSpec,
       decryptionPrivateKeyHandle,
-      cipherSuite,
       hybridEncryptionMapper
     )
   // There is no salt when hashing the encrypted requisition spec
@@ -133,10 +131,9 @@ fun verifyMeasurementSpec(
 suspend fun decryptRequisitionSpec(
   encryptedSignedDataRequisitionSpec: ByteString,
   dataProviderPrivateKeyHandle: PrivateKeyHandle,
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
 ): SignedData {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return SignedData.parseFrom(
     hybridCryptor.decrypt(dataProviderPrivateKeyHandle, encryptedSignedDataRequisitionSpec)
   )

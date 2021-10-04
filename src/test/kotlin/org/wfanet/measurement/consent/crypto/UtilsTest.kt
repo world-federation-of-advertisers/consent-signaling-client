@@ -19,13 +19,11 @@ import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import java.util.Random
-import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
@@ -50,11 +48,11 @@ class UtilsTest {
         .build()
     val aggregatorPrivateKeyHandleKey = "some arbitrary key"
     val aggregatorPrivateKey: PrivateKey =
-      readPrivateKey(DUCHY_AGG_KEY_FILE, certificate.getPublicKey().algorithm)
+      readPrivateKey(DUCHY_AGG_KEY_FILE, certificate.publicKey.algorithm)
     val privateKeyHandle =
       keyStore.storePrivateKeyDer(
         aggregatorPrivateKeyHandleKey,
-        ByteString.copyFrom(aggregatorPrivateKey.getEncoded())
+        ByteString.copyFrom(aggregatorPrivateKey.encoded)
       )
     val signedMessage =
       signMessage<MeasurementResult>(
@@ -68,27 +66,7 @@ class UtilsTest {
 
   @Test
   fun `supported cipher suite maps to to EciesCryptor`() {
-    val cipherSuite =
-      HybridCipherSuite.newBuilder()
-        .apply {
-          kem = HybridCipherSuite.KeyEncapsulationMechanism.ECDH_P256_HKDF_HMAC_SHA256
-          dem = HybridCipherSuite.DataEncapsulationMechanism.AES_128_GCM
-        }
-        .build()
-    val hybridCryptor = getHybridCryptorForCipherSuite(cipherSuite)
+    val hybridCryptor = getHybridCryptorForCipherSuite()
     assertThat(hybridCryptor).isInstanceOf(EciesCryptor::class.java)
-  }
-
-  @Test
-  fun `unsupported cipher suite map to hybrid cryptor returns error`() {
-    val cipherSuite =
-      HybridCipherSuite.newBuilder()
-        .apply {
-          kem = HybridCipherSuite.KeyEncapsulationMechanism.KEY_ENCAPSULATION_MECHANISM_UNSPECIFIED
-          dem =
-            HybridCipherSuite.DataEncapsulationMechanism.DATA_ENCAPSULATION_MECHANISM_UNSPECIFIED
-        }
-        .build()
-    assertFailsWith(IllegalArgumentException::class) { getHybridCryptorForCipherSuite(cipherSuite) }
   }
 }

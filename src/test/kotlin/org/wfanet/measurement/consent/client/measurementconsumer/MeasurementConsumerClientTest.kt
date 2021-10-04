@@ -24,7 +24,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -49,15 +48,10 @@ import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 private val keyStore = InMemoryKeyStore()
 private val hybridCryptor = ReversingHybridCryptor()
 
-private val FAKE_MEASUREMENT_SPEC =
-  MeasurementSpec.newBuilder()
-    .apply { cipherSuite = HybridCipherSuite.getDefaultInstance() }
-    .build()
+private val FAKE_MEASUREMENT_SPEC = MeasurementSpec.newBuilder().build()
 
 private val FAKE_ENCRYPTION_PUBLIC_KEY =
-  EncryptionPublicKey.newBuilder()
-    .apply { publicKeyInfo = ByteString.copyFromUtf8("testPublicKey") }
-    .build()
+  EncryptionPublicKey.newBuilder().apply { data = ByteString.copyFromUtf8("testPublicKey") }.build()
 
 private val FAKE_MEASUREMENT_RESULT =
   Measurement.Result.newBuilder()
@@ -152,7 +146,6 @@ class MeasurementConsumerClientTest {
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
         measurementPublicKey = measurementPublicKey,
-        cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
       )
 
@@ -180,7 +173,7 @@ class MeasurementConsumerClientTest {
   fun `signEncryptionPublicKey returns valid signature`() = runBlocking {
     val mcEncryptionPublicKey =
       EncryptionPublicKey.newBuilder()
-        .apply { publicKeyInfo = ByteString.copyFromUtf8("testMCPublicKey") }
+        .apply { data = ByteString.copyFromUtf8("testMCPublicKey") }
         .build()
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
     checkNotNull(privateKeyHandle)
@@ -195,7 +188,6 @@ class MeasurementConsumerClientTest {
 
   @Test
   fun `decryptResult returns decrypted MeasurementResult`() = runBlocking {
-    val hybridCipherSuite = HybridCipherSuite.getDefaultInstance()
     // Encrypt a Result (as SignedData) using the Duchy Aggregator Functions
     val aggregatorPrivateKeyHandle = keyStore.getPrivateKeyHandle(AGG_PRIVATE_KEY_HANDLE_KEY)
     checkNotNull(aggregatorPrivateKeyHandle)
@@ -205,7 +197,6 @@ class MeasurementConsumerClientTest {
       encryptResult(
         signedResult = signedResult,
         measurementPublicKey = MC_PUBLIC_KEY,
-        cipherSuite = hybridCipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
       )
 
@@ -213,12 +204,7 @@ class MeasurementConsumerClientTest {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
     checkNotNull(privateKeyHandle)
     val decryptedSignedDataResult =
-      decryptResult(
-        encryptedSignedResult,
-        privateKeyHandle,
-        hybridCipherSuite,
-        ::fakeGetHybridCryptorForCipherSuite
-      )
+      decryptResult(encryptedSignedResult, privateKeyHandle, ::fakeGetHybridCryptorForCipherSuite)
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
     assertThat(signedResult).isEqualTo(decryptedSignedDataResult)

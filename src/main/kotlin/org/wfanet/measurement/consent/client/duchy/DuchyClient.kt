@@ -16,9 +16,9 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import kotlin.reflect.KFunction0
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
@@ -97,10 +97,9 @@ suspend fun signResult(
 fun encryptResult(
   signedResult: SignedData,
   measurementPublicKey: EncryptionPublicKey,
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
 ): ByteString {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
 }
 
