@@ -25,7 +25,6 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -50,7 +49,7 @@ import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 
 private val MEASUREMENT_PUBLIC_KEY =
   EncryptionPublicKey.newBuilder()
-    .apply { publicKeyInfo = ByteString.copyFromUtf8("some-public-key") }
+    .apply { data = ByteString.copyFromUtf8("some-public-key") }
     .build()
 private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
 private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
@@ -62,10 +61,7 @@ private val hybridCryptor = ReversingHybridCryptor()
 
 private val FAKE_MEASUREMENT_SPEC =
   MeasurementSpec.newBuilder()
-    .apply {
-      cipherSuite = HybridCipherSuite.getDefaultInstance()
-      measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
-    }
+    .apply { measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString() }
     .build()
 
 private val FAKE_REQUISITION_SPEC =
@@ -138,7 +134,6 @@ class DataProviderClientTest {
             encryptRequisitionSpec(
               signedRequisitionSpec = signedRequisitionSpec,
               measurementPublicKey = measurementPublicKey,
-              cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
               hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite,
             )
           measurementSpec =
@@ -149,7 +144,6 @@ class DataProviderClientTest {
       decryptRequisitionSpecAndGenerateRequisitionFingerprint(
         requisition = requisition,
         decryptionPrivateKeyHandle = edpPrivateKeyHandle,
-        cipherSuite = FAKE_MEASUREMENT_SPEC.cipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite,
       )
     assertThat(requisitionSpecAndFingerprint.signedRequisitionSpec).isEqualTo(signedRequisitionSpec)
@@ -193,7 +187,6 @@ class DataProviderClientTest {
 
   @Test
   fun `decryptRequistionSpec returns decrypted RequistionSpec`() = runBlocking {
-    val hybridCipherSuite = HybridCipherSuite.getDefaultInstance()
     // Encrypt a RequisitionSpec (as SignedData) using the Measurement Consumer Functions
     val measurementConsumerPrivateKeyHandle =
       keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
@@ -208,7 +201,6 @@ class DataProviderClientTest {
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
         measurementPublicKey = EDP_PUBLIC_KEY,
-        cipherSuite = hybridCipherSuite,
         hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
       )
 
@@ -219,7 +211,6 @@ class DataProviderClientTest {
       decryptRequisitionSpec(
         encryptedRequisitionSpec,
         privateKeyHandle,
-        hybridCipherSuite,
         ::fakeGetHybridCryptorForCipherSuite
       )
     val decryptedRequisitionSpec =

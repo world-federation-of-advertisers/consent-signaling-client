@@ -18,7 +18,6 @@ import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.ExchangeStep
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -62,10 +61,9 @@ suspend fun signRequisitionSpec(
 fun encryptRequisitionSpec(
   signedRequisitionSpec: SignedData,
   measurementPublicKey: EncryptionPublicKey,
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): ByteString {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return hybridCryptor.encrypt(measurementPublicKey, signedRequisitionSpec.toByteString())
 }
 
@@ -105,10 +103,9 @@ suspend fun signEncryptionPublicKey(
 suspend fun decryptResult(
   encryptedSignedDataResult: ByteString,
   measurementPrivateKeyHandle: PrivateKeyHandle,
-  cipherSuite: HybridCipherSuite,
-  hybridEncryptionMapper: (HybridCipherSuite) -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): SignedData {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper(cipherSuite)
+  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return SignedData.parseFrom(
     hybridCryptor.decrypt(measurementPrivateKeyHandle, encryptedSignedDataResult)
   )

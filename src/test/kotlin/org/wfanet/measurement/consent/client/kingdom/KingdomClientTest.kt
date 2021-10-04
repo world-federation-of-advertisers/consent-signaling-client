@@ -23,7 +23,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.api.v2alpha.HybridCipherSuite
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
@@ -34,17 +33,14 @@ import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 
 private val MEASUREMENT_PUBLIC_KEY =
   EncryptionPublicKey.newBuilder()
-    .apply { publicKeyInfo = ByteString.copyFromUtf8("some-public-key") }
+    .apply { data = ByteString.copyFromUtf8("some-public-key") }
     .build()
 
 private val keyStore = InMemoryKeyStore()
 
 private val FAKE_MEASUREMENT_SPEC =
   MeasurementSpec.newBuilder()
-    .apply {
-      cipherSuite = HybridCipherSuite.getDefaultInstance()
-      measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
-    }
+    .apply { measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString() }
     .build()
 
 private val MC_CERTIFICATE: X509Certificate = readCertificate(MC_1_CERT_PEM_FILE)

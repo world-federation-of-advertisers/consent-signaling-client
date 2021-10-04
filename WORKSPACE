@@ -25,9 +25,9 @@ http_archive(
 # Common JVM for Measurement
 http_archive(
     name = "wfa_common_jvm",
-    sha256 = "f9b2be33d3515a66e28feff14ca7405a73b4853f28912f69175bddc183805b92",
-    strip_prefix = "common-jvm-0.13.0",
-    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/refs/tags/v0.13.0.tar.gz",
+    sha256 = "cbc253d5a240b5587d8defbf2af08772d0eda997aa348c7ed870f413750abc35",
+    strip_prefix = "common-jvm-0.16.0",
+    url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/refs/tags/v0.16.0.tar.gz",
 )
 
 # @com_google_truth_truth
@@ -165,7 +165,7 @@ switched_rules_by_language(
 # Measurement proto.
 http_archive(
     name = "wfa_measurement_proto",
-    sha256 = "9a4f5054f4a2b4d03ad8398436e04781f39b20f8ad13da15cbc80f21d69b888f",
-    strip_prefix = "cross-media-measurement-api-c742b249dcdcb1731899b2a8d61e9fcf1b597ca7",
-    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/c742b249dcdcb1731899b2a8d61e9fcf1b597ca7.tar.gz",
+    sha256 = "1ce85f62abe07fc6921d0b6599289844ffca7b39c56cd6bd8121ada19d1c4ec2",
+    strip_prefix = "cross-media-measurement-api-0.7.2",
+    url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.7.2.tar.gz",
 )
