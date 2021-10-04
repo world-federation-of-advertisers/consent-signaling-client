@@ -17,7 +17,6 @@ package org.wfanet.measurement.consent.client.dataprovider
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import kotlin.reflect.KFunction0
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.ExchangeStep
@@ -55,7 +54,7 @@ data class RequisitionSpecAndFingerprint(
 suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
   requisition: Requisition,
   decryptionPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): RequisitionSpecAndFingerprint {
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
@@ -131,7 +130,7 @@ fun verifyMeasurementSpec(
 suspend fun decryptRequisitionSpec(
   encryptedSignedDataRequisitionSpec: ByteString,
   dataProviderPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): SignedData {
   val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return SignedData.parseFrom(

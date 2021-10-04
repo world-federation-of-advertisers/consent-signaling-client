@@ -16,7 +16,6 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import kotlin.reflect.KFunction0
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
@@ -62,7 +61,7 @@ suspend fun signRequisitionSpec(
 fun encryptRequisitionSpec(
   signedRequisitionSpec: SignedData,
   measurementPublicKey: EncryptionPublicKey,
-  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): ByteString {
   val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return hybridCryptor.encrypt(measurementPublicKey, signedRequisitionSpec.toByteString())
@@ -104,7 +103,7 @@ suspend fun signEncryptionPublicKey(
 suspend fun decryptResult(
   encryptedSignedDataResult: ByteString,
   measurementPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: KFunction0<HybridCryptor> = ::getHybridCryptorForCipherSuite,
+  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): SignedData {
   val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return SignedData.parseFrom(
