@@ -15,7 +15,6 @@
 package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
@@ -24,11 +23,8 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
-import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hashSha256
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
-import org.wfanet.measurement.consent.crypto.sign
+import org.wfanet.measurement.consent.crypto.keys.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as verifyExchangeStepSignaturesCommon
 import org.wfanet.measurement.consent.crypto.verifySignature
@@ -54,13 +50,11 @@ data class RequisitionSpecAndFingerprint(
 suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
   requisition: Requisition,
   decryptionPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): RequisitionSpecAndFingerprint {
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
       requisition.encryptedRequisitionSpec,
       decryptionPrivateKeyHandle,
-      hybridEncryptionMapper
     )
   // There is no salt when hashing the encrypted requisition spec
   val hashedEncryptedRequisitionSpec: ByteString = hashSha256(requisition.encryptedRequisitionSpec)
@@ -76,15 +70,8 @@ suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
 suspend fun signRequisitionFingerprint(
   requisitionFingerprint: ByteString,
   consentSignalingPrivateKeyHandle: PrivateKeyHandle,
-  consentSignalingCertificate: X509Certificate,
 ): SignedData {
-  val dataProviderPrivateKey: PrivateKey =
-    checkNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
-  val participationSignature =
-    dataProviderPrivateKey.sign(
-      certificate = consentSignalingCertificate,
-      data = requisitionFingerprint
-    )
+  val participationSignature = consentSignalingPrivateKeyHandle.sign(data = requisitionFingerprint)
   return SignedData.newBuilder()
     .apply {
       data = requisitionFingerprint
@@ -125,16 +112,14 @@ fun verifyMeasurementSpec(
 
 /**
  * Decrypts the [encryptedSignedDataRequisitionSpec] of the requisition spec using the specified
- * [HybridCryptor] specified by the [HybridEncryptionMapper].
+ * [dataProviderPrivateKeyHandle]
  */
 suspend fun decryptRequisitionSpec(
   encryptedSignedDataRequisitionSpec: ByteString,
-  dataProviderPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  dataProviderPrivateKeyHandle: PrivateKeyHandle
 ): SignedData {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return SignedData.parseFrom(
-    hybridCryptor.decrypt(dataProviderPrivateKeyHandle, encryptedSignedDataRequisitionSpec)
+    dataProviderPrivateKeyHandle.decrypt(encryptedSignedDataRequisitionSpec)
   )
 }
 

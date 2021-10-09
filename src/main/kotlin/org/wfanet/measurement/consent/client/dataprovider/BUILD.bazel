@@ -9,7 +9,6 @@ kt_jvm_library(
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:hashing",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:utils",
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:exchange_step_java_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_java_proto",

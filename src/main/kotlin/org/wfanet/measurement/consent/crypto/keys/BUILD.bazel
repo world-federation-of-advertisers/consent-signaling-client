@@ -1,0 +1,16 @@
+load("@io_bazel_rules_kotlin//kotlin:kotlin.bzl", "kt_jvm_library")
+
+package(default_visibility = ["//visibility:public"])
+
+kt_jvm_library(
+    name = "keys",
+    srcs = glob(["*.kt"]),
+    deps = [
+        "//src/main/proto/wfa/measurement/api/v2alpha:certificate_java_proto",
+        "//src/main/proto/wfa/measurement/api/v2alpha:crypto_java_proto",
+        "@wfa_common_jvm//imports/java/com/google/crypto/tink",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:aead",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:security_provider",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/storage:store"
+    ],
+)
