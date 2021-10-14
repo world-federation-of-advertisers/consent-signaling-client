@@ -20,8 +20,11 @@ import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
 /**
- * Does no crypto. It only reverses the [data]. This should only be used for bring-up, unit testing,
- * or debugging. Do not use in production.
+ * Does no crypto.
+ *
+ * This encrypts and decrypts by reversing the input plaintext or ciphertext.
+ *
+ * This should only be used for bring-up, unit testing, or debugging. Do not use in production.
  */
 class ReversingHybridCryptor : HybridCryptor {
   private fun reverseByteString(data: ByteString): ByteString {

@@ -25,7 +25,7 @@ import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 
 private val PLAINTEXT = ByteString.copyFromUtf8("some-plaintext")
 private val PRIVATE_KEY = ByteString.copyFromUtf8("some-private-key")
-private val KEYSTORE_ID = "some-keystore-id"
+private const val KEYSTORE_ID = "some-keystore-id"
 private val ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
 abstract class AbstractHybridCryptorTest(val keystore: KeyStore = InMemoryKeyStore()) {

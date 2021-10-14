@@ -43,6 +43,6 @@ class InMemoryKeyStore : KeyStore() {
   }
 
   override suspend fun readPrivateKey(privateKeyHandle: PrivateKeyHandle): ByteString? {
-    return keyStoreMap[privateKeyHandle.id]?.let { it }
+    return keyStoreMap[privateKeyHandle.id]
   }
 }

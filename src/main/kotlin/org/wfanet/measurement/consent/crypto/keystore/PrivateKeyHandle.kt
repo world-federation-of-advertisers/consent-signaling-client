@@ -25,9 +25,7 @@ import org.wfanet.measurement.common.crypto.readPrivateKey
  */
 class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStore) {
 
-  /**
-   * Converts the [PrivateKeyHandle] into a usable [TinkKeysetHandle] object (used by TinkCrypto)
-   */
+  /** Extracts a [KeysetHandle]. */
   internal suspend fun toTinkKeysetHandle(): KeysetHandle {
     TODO("Not yet implemented")
   }
@@ -39,7 +37,7 @@ class PrivateKeyHandle constructor(val id: String, private val keyStore: KeyStor
   suspend fun toJavaPrivateKey(certificate: X509Certificate): PrivateKey? {
     val internalPrivateKey = toByteString()
     internalPrivateKey?.let {
-      return readPrivateKey(internalPrivateKey, certificate.getPublicKey().getAlgorithm())
+      return readPrivateKey(internalPrivateKey, certificate.publicKey.algorithm)
     }
     return null
   }

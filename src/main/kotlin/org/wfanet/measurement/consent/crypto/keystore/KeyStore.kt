@@ -19,7 +19,7 @@ import com.google.protobuf.ByteString
 /**
  * [KeyStore] is an abstract class for storing private keys in different implementation of KMS
  *
- * Clients of this class can store [PrivateKeyBytes] (currently in DER format) and can retrieve a
+ * Clients of this class can store a private key (currently in DER format) and can retrieve a
  * [PrivateKeyHandle] of the stored key, however the client will not be enable to read the actual
  * key contents stored in KMS.
  */

@@ -17,7 +17,6 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -27,7 +26,6 @@ import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
-import org.wfanet.measurement.consent.crypto.verifyExchangeStepSignatures as verifyExchangeStepSignaturesCommon
 import org.wfanet.measurement.consent.crypto.verifySignature
 
 /** Create a SHA256 hash of the serialized [dataProviderList] using the [dataProviderListSalt]. */
@@ -39,8 +37,9 @@ fun createDataProviderListHash(
 }
 
 /**
- * Signs [requisitionSpec] into a [SignedData] ProtoBuf. The [measurementConsumerX509] is required
- * to determine the algorithm type of the signature
+ * Signs [requisitionSpec] into a [SignedData].
+ *
+ * The [measurementConsumerCertificate] determines the algorithm type of the signature.
  */
 suspend fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
@@ -56,7 +55,7 @@ suspend fun signRequisitionSpec(
 
 /**
  * Encrypts the [SignedData] of the requisitionSpec using the specified [HybridCryptor] specified by
- * the [HybridEncryptionMapper].
+ * the [hybridEncryptionMapper].
  */
 fun encryptRequisitionSpec(
   signedRequisitionSpec: SignedData,
@@ -68,8 +67,9 @@ fun encryptRequisitionSpec(
 }
 
 /**
- * Signs [measurementSpec] into a [SignedData] ProtoBuf. The [measurementConsumerX509] is required
- * to determine the algorithm type of the signature
+ * Signs [measurementSpec] into a [SignedData].
+ *
+ * [measurementConsumerCertificate] determines the algorithm type of the signature.
  */
 suspend fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
@@ -98,7 +98,7 @@ suspend fun signEncryptionPublicKey(
 
 /**
  * Decrypts the [encryptedSignedDataResult] of the measurement results using the specified
- * [HybridCryptor] specified by the [HybridEncryptionMapper].
+ * [HybridCryptor] specified by the [hybridEncryptionMapper].
  */
 suspend fun decryptResult(
   encryptedSignedDataResult: ByteString,
@@ -141,18 +141,3 @@ fun verifyEncryptionPublicKey(
     encryptionPublicKeySignature
   )
 }
-
-/**
- * Verifies that the [signedExchangeWorkflow] was signed by both the entities represented by
- * [modelProviderCertificate] and [dataProviderCertificate]
- */
-fun verifyExchangeStepSignatures(
-  signedExchangeWorkflow: ExchangeStep.SignedExchangeWorkflow,
-  modelProviderCertificate: X509Certificate,
-  dataProviderCertificate: X509Certificate,
-): Boolean =
-  verifyExchangeStepSignaturesCommon(
-    signedExchangeWorkflow,
-    modelProviderCertificate,
-    dataProviderCertificate,
-  )

@@ -35,7 +35,6 @@ import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
 import org.wfanet.measurement.consent.client.measurementconsumer.signRequisitionSpec
 import org.wfanet.measurement.consent.crypto.hashSha256
-import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
@@ -57,7 +56,6 @@ private val SOME_SERIALIZED_MEASUREMENT_SPEC =
   ByteString.copyFromUtf8("some-serialized-measurement-spec")
 
 private val keyStore = InMemoryKeyStore()
-private val hybridCryptor = ReversingHybridCryptor()
 
 private val FAKE_MEASUREMENT_SPEC =
   MeasurementSpec.newBuilder()

@@ -35,12 +35,14 @@ class HashingTest {
     assertThat(hashedData1).isEqualTo(hashedData2)
   }
 
+  @Test
   fun `hash same data without salt yields same value`() {
     val hashedData1 = hashSha256(DATA)
     val hashedData2 = hashSha256(DATA)
     assertThat(hashedData1).isEqualTo(hashedData2)
   }
 
+  @Test
   fun `hash same data with different salt yields different values`() {
     val hashedData1 = hashSha256(DATA, SALT)
     val hashedData2 = hashSha256(DATA, ALT_SALT)

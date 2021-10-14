@@ -91,7 +91,7 @@ suspend fun signResult(
 
 /**
  * Encrypts the [SignedData] of the measurement results using the specified [HybridCryptor]
- * specified by the [HybridEncryptionMapper].
+ * specified by [hybridEncryptionMapper].
  */
 fun encryptResult(
   signedResult: SignedData,

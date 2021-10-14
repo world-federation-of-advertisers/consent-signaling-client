@@ -36,12 +36,13 @@ abstract class AbstractKeyStoreTest {
   abstract val keyStore: KeyStore
 
   @Test
-  fun `getPrivateKeyHandle returns handle for existing key`() =
-    runBlocking<Unit> {
-      val privateKeyHandle1 = keyStore.storePrivateKeyDer(KEY, VALUE)
-      val privateKeyHandle2 = keyStore.getPrivateKeyHandle(KEY)
-      assertThat(privateKeyHandle1.equals(privateKeyHandle2))
-    }
+  fun `getPrivateKeyHandle returns handle for existing key`() = runBlocking {
+    val privateKeyHandle1 = keyStore.storePrivateKeyDer(KEY, VALUE)
+    val privateKeyHandle2 = keyStore.getPrivateKeyHandle(KEY)
+
+    assertThat(privateKeyHandle2).isNotNull()
+    assertThat(privateKeyHandle1.id).isEqualTo(privateKeyHandle2?.id)
+  }
 
   @Test
   fun `storePrivateKeyDer returns error for existing key`() =
@@ -55,16 +56,16 @@ abstract class AbstractKeyStoreTest {
   @Test
   fun `getPrivateKeyHandle returns null when key is not found`() = runBlocking {
     val privateKeyHandle = keyStore.getPrivateKeyHandle(KEY)
-    assertThat(privateKeyHandle).isEqualTo(null)
+    assertThat(privateKeyHandle).isNull()
   }
 
   @Test
   fun `toJavaPrivateKey returns existing private key`() = runBlocking {
     val privateKey: PrivateKey = readPrivateKey(SERVER_KEY_FILE, KEY_ALGORITHM)
-    keyStore.storePrivateKeyDer(KEY, ByteString.copyFrom(privateKey.getEncoded()))
+    keyStore.storePrivateKeyDer(KEY, ByteString.copyFrom(privateKey.encoded))
     val privateKeyHandle = requireNotNull(keyStore.getPrivateKeyHandle(KEY))
     val certificate: X509Certificate = readCertificate(SERVER_CERT_PEM_FILE)
-    assertThat(requireNotNull(privateKeyHandle.toJavaPrivateKey(certificate)).getEncoded())
-      .isEqualTo(privateKey.getEncoded())
+    assertThat(requireNotNull(privateKeyHandle.toJavaPrivateKey(certificate)).encoded)
+      .isEqualTo(privateKey.encoded)
   }
 }
