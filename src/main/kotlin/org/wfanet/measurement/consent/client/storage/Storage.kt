@@ -33,7 +33,7 @@ import org.wfanet.measurement.storage.StorageClient.Blob
  * Note that the validation happens in a separate thread and is non-blocking, but will throw a
  * terminal error if it fails.
  */
-suspend fun Blob.verifiedRead(
+fun Blob.verifiedRead(
   cert: X509Certificate,
   signature: ByteString,
   bufferSize: Int

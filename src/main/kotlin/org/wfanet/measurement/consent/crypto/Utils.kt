@@ -17,13 +17,13 @@ package org.wfanet.measurement.consent.crypto
 import com.google.protobuf.Message
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import org.wfanet.measurement.api.v2alpha.ExchangeStep
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.signedData
 import org.wfanet.measurement.consent.crypto.hybridencryption.EciesCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
-/** Generic for signing [Protobuf] messages. Used by client functions to show consent. */
+/** Generic for signing [Message]s. Used by client functions to show consent. */
 suspend fun <T : Message> signMessage(
   message: T,
   privateKeyHandle: PrivateKeyHandle,
@@ -32,38 +32,13 @@ suspend fun <T : Message> signMessage(
   val messageData = message.toByteString()
   val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey(certificate))
   val messageSignature = privateKey.sign(certificate = certificate, data = messageData)
-  return SignedData.newBuilder()
-    .apply {
-      data = messageData
-      signature = messageSignature
-    }
-    .build()
+  return signedData {
+    data = messageData
+    signature = messageSignature
+  }
 }
 
 /** Maps based on kem and dem types. */
 fun getHybridCryptorForCipherSuite(): HybridCryptor {
   return EciesCryptor()
-}
-
-/**
- * Verifies that the [signedExchangeWorkflow] was signed by both the entities represented by
- * [modelProviderCertificate] and [dataProviderCertificate]
- */
-fun verifyExchangeStepSignatures(
-  signedExchangeWorkflow: ExchangeStep.SignedExchangeWorkflow,
-  modelProviderCertificate: X509Certificate,
-  dataProviderCertificate: X509Certificate,
-): Boolean {
-  val signedData = signedExchangeWorkflow.serializedExchangeWorkflow
-  val hasModelProviderSignature =
-    modelProviderCertificate.verifySignature(
-      signedData,
-      signedExchangeWorkflow.modelProviderSignature
-    )
-  val hasDataProviderSignature =
-    dataProviderCertificate.verifySignature(
-      signedData,
-      signedExchangeWorkflow.dataProviderSignature
-    )
-  return hasModelProviderSignature && hasDataProviderSignature
 }

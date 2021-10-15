@@ -17,7 +17,7 @@ package org.wfanet.measurement.consent.crypto.testing
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 
-/** Always returns [ReversingHybridCryptor] regardless of input [HybridCipherSuite]. */
+/** Returns a [ReversingHybridCryptor]. */
 fun fakeGetHybridCryptorForCipherSuite(): HybridCryptor {
   return ReversingHybridCryptor()
 }

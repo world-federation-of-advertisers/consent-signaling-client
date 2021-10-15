@@ -1,12 +1,17 @@
 load("@rules_java//java:defs.bzl", "java_proto_library")
+load("@wfa_common_jvm//build:kt_jvm_proto_library.bzl", "kt_jvm_proto_library")
 
 package(default_visibility = ["//visibility:public"])
 
 java_proto_library(
     name = "certificate_java_proto",
-    deps = [
-        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:certificate_proto",
-    ],
+    deps = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:certificate_proto"],
+)
+
+kt_jvm_proto_library(
+    name = "certificate_kt_jvm_proto",
+    srcs = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:certificate_proto"],
+    deps = [":certificate_java_proto"],
 )
 
 java_proto_library(
@@ -16,11 +21,23 @@ java_proto_library(
     ],
 )
 
+kt_jvm_proto_library(
+    name = "crypto_kt_jvm_proto",
+    srcs = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:crypto_proto"],
+    deps = [":crypto_java_proto"],
+)
+
 java_proto_library(
     name = "requisition_spec_java_proto",
     deps = [
         "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:requisition_spec_proto",
     ],
+)
+
+kt_jvm_proto_library(
+    name = "requisition_spec_kt_jvm_proto",
+    srcs = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:requisition_spec_proto"],
+    deps = [":requisition_spec_java_proto"],
 )
 
 java_proto_library(
@@ -30,11 +47,23 @@ java_proto_library(
     ],
 )
 
+kt_jvm_proto_library(
+    name = "requisition_kt_jvm_proto",
+    srcs = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:requisition_proto"],
+    deps = [":requisition_java_proto"],
+)
+
 java_proto_library(
     name = "measurement_spec_java_proto",
     deps = [
         "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_proto",
     ],
+)
+
+kt_jvm_proto_library(
+    name = "measurement_spec_kt_jvm_proto",
+    srcs = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_proto"],
+    deps = [":measurement_spec_java_proto"],
 )
 
 java_proto_library(
@@ -44,9 +73,8 @@ java_proto_library(
     ],
 )
 
-java_proto_library(
-    name = "exchange_step_java_proto",
-    deps = [
-        "@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:exchange_step_proto",
-    ],
+kt_jvm_proto_library(
+    name = "measurement_kt_jvm_proto",
+    srcs = ["@wfa_measurement_proto//src/main/proto/wfa/measurement/api/v2alpha:measurement_proto"],
+    deps = [":measurement_java_proto"],
 )
