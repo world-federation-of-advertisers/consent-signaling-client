@@ -24,9 +24,9 @@ def consent_signaling_client_repositories():
     """
     http_archive(
         name = "wfa_common_jvm",
-        sha256 = "dad40dc1efc67ad692e1847f0634440ab95fe6454143a2540c92a27d288f5c57",
-        strip_prefix = "common-jvm-0.18.0",
-        url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/refs/tags/v0.18.0.tar.gz",
+        sha256 = "12819b095363d8294bd01c0e9c2cf847b21f895e96923b8a8c07836c8cd2c042",
+        strip_prefix = "common-jvm-0.20.1",
+        url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/refs/tags/v0.20.1.tar.gz",
     )
 
     http_archive(

@@ -6,7 +6,6 @@ kt_jvm_library(
     name = "measurementconsumer",
     srcs = ["MeasurementConsumerClient.kt"],
     deps = [
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto:hashing",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:utils",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
@@ -15,5 +14,6 @@ kt_jvm_library(
         "//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_kt_jvm_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:requisition_spec_kt_jvm_proto",
         "@wfa_common_jvm//imports/java/org/conscrypt",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:hashing",
     ],
 )

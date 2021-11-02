@@ -30,11 +30,11 @@ import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
 import org.wfanet.measurement.consent.client.measurementconsumer.signRequisitionSpec
-import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
@@ -66,7 +66,7 @@ private val FAKE_REQUISITION_SPEC =
   RequisitionSpec.newBuilder()
     .apply {
       dataProviderListHash =
-        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST, SOME_DATA_PROVIDER_LIST_SALT)
+        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST.concat(SOME_DATA_PROVIDER_LIST_SALT))
       measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
     }
     .build()

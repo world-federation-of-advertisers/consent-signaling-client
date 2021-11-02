@@ -20,8 +20,8 @@ import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
@@ -61,7 +61,7 @@ fun verifyDataProviderParticipation(
   computation: Computation
 ): Boolean {
   val hashedParticipantList: ByteString =
-    hashSha256(computation.dataProviderList, computation.dataProviderListSalt)
+    hashSha256(computation.dataProviderList.concat(computation.dataProviderListSalt))
   val requisitionFingerprint =
     requireNotNull(requisition.requisitionSpecHash)
       .concat(hashedParticipantList)
