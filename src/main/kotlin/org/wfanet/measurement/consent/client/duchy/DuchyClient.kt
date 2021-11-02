@@ -19,6 +19,7 @@ import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
+import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
@@ -27,49 +28,43 @@ import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifySignature
 
-/** Fields from the computationDetails proto of the internal duchy api */
-data class Computation(
-  /** Serialized `DataProviderList`. */
-  val dataProviderList: ByteString,
-  /** Salt for SHA256 hash of `dataProviderList`. */
-  val dataProviderListSalt: ByteString,
-  /** Serialized `MeasurementSpec`. */
-  val measurementSpec: ByteString
+/** Data about a Requisition that Duchy received from Kingdom. */
+data class Requisition(
+  /** Pre-computed requisition fingerprint. */
+  val requisitionFingerprint: ByteString,
+  /** SHA256 hash of nonce. */
+  val nonceHash: ByteString
 )
 
-/** Fields from the requisitionDetails proto of the internal duchy api */
-data class Requisition(
-  /**
-   * X.509 certificate in DER format which can be verified using the `DataProvider`'s root
-   * certificate.
-   */
-  val dataProviderCertificate: X509Certificate,
-  /** SHA256 hash of encrypted `RequisitionSpec`. */
-  val requisitionSpecHash: ByteString
-)
+/** Computes the "requisition fingerprint" for a requisition. */
+fun computeRequisitionFingerprint(
+  serializedMeasurementSpec: ByteString,
+  requisitionSpecHash: ByteString
+): ByteString {
+  return hashSha256(serializedMeasurementSpec.concat(requisitionSpecHash))
+}
 
 /**
- * For each EDP it receives input from:
- * 1. Independently rebuilds the requisitionFingerprint with data from Kingdom
- * 2. Verifies the EdpParticipationSignature against the fingerprint
- * 3. TODO: Check for replay attacks for dataProviderParticipationSignature
- * 4. TODO: Verify certificate chain for requisition.dataProviderCertificate
+ * Verifies EDP participation in fulfilling a [requisition] for a computation.
+ *
+ * @param measurementSpec [MeasurementSpec] retrieved from Kingdom
+ * @param requisition data about the Requisition retrieved from Kingdom
+ *
+ * The steps are:
+ * 1. Compare the requisition fingerprint to the one independently computed from Kingdom data.
+ * 2. Compute the hash of the nonce and compare it to the one from the Kingdom.
+ * 3. Verify that the list in [measurementSpec] contains the nonce hash.
  */
 fun verifyDataProviderParticipation(
-  dataProviderParticipationSignature: ByteString,
+  measurementSpec: MeasurementSpec,
   requisition: Requisition,
-  computation: Computation
+  requisitionFingerprint: ByteString,
+  nonce: Long
 ): Boolean {
-  val hashedParticipantList: ByteString =
-    hashSha256(computation.dataProviderList.concat(computation.dataProviderListSalt))
-  val requisitionFingerprint =
-    requireNotNull(requisition.requisitionSpecHash)
-      .concat(hashedParticipantList)
-      .concat(requireNotNull(computation.measurementSpec))
-  return requisition.dataProviderCertificate.verifySignature(
-    requisitionFingerprint,
-    dataProviderParticipationSignature
-  )
+  val nonceHash = hashSha256(nonce)
+  return requisitionFingerprint == requisition.requisitionFingerprint &&
+    nonceHash == requisition.nonceHash &&
+    measurementSpec.nonceHashesList.contains(nonceHash)
 }
 
 /**
