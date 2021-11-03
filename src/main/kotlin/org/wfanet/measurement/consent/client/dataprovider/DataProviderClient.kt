@@ -15,10 +15,8 @@
 package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
-import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -27,10 +25,9 @@ import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
-import org.wfanet.measurement.consent.crypto.sign
-import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.verifySignature
 
+@Deprecated("Use computeRequisitionFingerprint and decryptRequisitionSpec.")
 data class RequisitionSpecAndFingerprint(
   /** Decrypted Signed RequisitionSpec */
   val signedRequisitionSpec: SignedData,
@@ -49,58 +46,26 @@ data class RequisitionSpecAndFingerprint(
  * @return a [RequisitionSpecAndFingerprint] containing the decrypted RequisitionSpec and generated
  * RequisitionFingerprint
  */
+@Deprecated("Use computeRequisitionFingerprint and decryptRequisitionSpec.")
 suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
   requisition: Requisition,
   decryptionPrivateKeyHandle: PrivateKeyHandle,
   hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): RequisitionSpecAndFingerprint {
+  val requisitionFingerprint = computeRequisitionFingerprint(requisition)
   val decryptedRequisitionSpec =
     decryptRequisitionSpec(
       requisition.encryptedRequisitionSpec,
       decryptionPrivateKeyHandle,
       hybridEncryptionMapper
     )
-  // There is no salt when hashing the encrypted requisition spec
-  val hashedEncryptedRequisitionSpec: ByteString = hashSha256(requisition.encryptedRequisitionSpec)
-  val requisitionSpec = RequisitionSpec.parseFrom(decryptedRequisitionSpec.data)
-  val requisitionFingerprint =
-    hashedEncryptedRequisitionSpec
-      .concat(requireNotNull(requisitionSpec.dataProviderListHash))
-      .concat(requireNotNull(requisition.measurementSpec.data))
   return RequisitionSpecAndFingerprint(decryptedRequisitionSpec, requisitionFingerprint)
 }
 
-/** Signs the RequisitionFingerprint resulting in the participationSignature */
-suspend fun signRequisitionFingerprint(
-  requisitionFingerprint: ByteString,
-  consentSignalingPrivateKeyHandle: PrivateKeyHandle,
-  consentSignalingCertificate: X509Certificate,
-): SignedData {
-  val dataProviderPrivateKey: PrivateKey =
-    checkNotNull(consentSignalingPrivateKeyHandle.toJavaPrivateKey(consentSignalingCertificate))
-  val participationSignature =
-    dataProviderPrivateKey.sign(
-      certificate = consentSignalingCertificate,
-      data = requisitionFingerprint
-    )
-  return SignedData.newBuilder()
-    .apply {
-      data = requisitionFingerprint
-      signature = participationSignature
-    }
-    .build()
-}
-
-/** Signs the dataProvider's encryptionPublicKey. */
-suspend fun signEncryptionPublicKey(
-  encryptionPublicKey: EncryptionPublicKey,
-  privateKeyHandle: PrivateKeyHandle,
-  dataProviderCertificate: X509Certificate
-): SignedData {
-  return signMessage(
-    message = encryptionPublicKey,
-    privateKeyHandle = privateKeyHandle,
-    certificate = dataProviderCertificate
+/** Computes the "requisition fingerprint" for [requisition]. */
+fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
+  return hashSha256(
+    requisition.measurementSpec.data.concat(hashSha256(requisition.encryptedRequisitionSpec))
   )
 }
 
@@ -137,12 +102,14 @@ suspend fun decryptRequisitionSpec(
 }
 
 /**
- * Verify the RequisitionSpec from the MeasurementConsumer
- * 1. Verifies the [requisitionSpec] against the [requisitionSpecSignature]
- * 2. TODO: Check for replay attacks for [requisitionSpecSignature]
- * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
- * 4. Verifies the measurementPublicKey in requisitionSpec matches that of the corresponding
- * measurementSpec
+ * Verifies [requisitionSpec] from the MeasurementConsumer.
+ *
+ * The steps are:
+ * 1. TODO: Check for replay attacks
+ * 2. TODO: Verify certificate chain for [measurementConsumerCertificate]
+ * 3. Verify the [requisitionSpecSignature]
+ * 4. Compare the measurement encryption key to the one in [measurementSpec]
+ * 5. Compute the hash of the nonce and verify that the list in [measurementSpec] contains it
  */
 fun verifyRequisitionSpec(
   requisitionSpecSignature: ByteString,
@@ -153,7 +120,9 @@ fun verifyRequisitionSpec(
   return measurementConsumerCertificate.verifySignature(
     requisitionSpec.toByteString(),
     requisitionSpecSignature
-  ) && requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey)
+  ) &&
+    requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey) &&
+    measurementSpec.nonceHashesList.contains(hashSha256(requisitionSpec.nonce))
 }
 
 /**

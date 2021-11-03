@@ -74,6 +74,8 @@ private const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
 private val AGG_CERTIFICATE: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
 private const val AGG_PRIVATE_KEY_HANDLE_KEY = "agg1"
 
+private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
+
 @RunWith(JUnit4::class)
 class MeasurementConsumerClientTest {
   companion object {
@@ -118,7 +120,7 @@ class MeasurementConsumerClientTest {
       RequisitionSpec.newBuilder()
         .apply {
           measurementPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY.toByteString()
-          dataProviderListHash = ByteString.copyFromUtf8("testDataProviderListHash")
+          nonce = NONCE
         }
         .build()
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)

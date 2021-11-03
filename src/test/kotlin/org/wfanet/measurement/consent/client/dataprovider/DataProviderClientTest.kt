@@ -29,8 +29,9 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.measurementSpec
+import org.wfanet.measurement.api.v2alpha.requisitionSpec
 import org.wfanet.measurement.common.HexString
-import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
@@ -38,7 +39,6 @@ import org.wfanet.measurement.consent.client.measurementconsumer.signRequisition
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
@@ -46,30 +46,27 @@ import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 
+private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
+private val NONCE_HASH =
+  HexString("A4EA9C2984AE1D0F7D0B026B0BB41C136FC0767E29DF40951CFE019B7D9F1CE1")
 private val MEASUREMENT_PUBLIC_KEY =
   EncryptionPublicKey.newBuilder()
     .apply { data = ByteString.copyFromUtf8("some-public-key") }
     .build()
-private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
-private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
 private val SOME_SERIALIZED_MEASUREMENT_SPEC =
   ByteString.copyFromUtf8("some-serialized-measurement-spec")
 
 private val keyStore = InMemoryKeyStore()
 
-private val FAKE_MEASUREMENT_SPEC =
-  MeasurementSpec.newBuilder()
-    .apply { measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString() }
-    .build()
+private val FAKE_MEASUREMENT_SPEC = measurementSpec {
+  measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
+  nonceHashes += NONCE_HASH.bytes
+}
 
-private val FAKE_REQUISITION_SPEC =
-  RequisitionSpec.newBuilder()
-    .apply {
-      dataProviderListHash =
-        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST.concat(SOME_DATA_PROVIDER_LIST_SALT))
-      measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
-    }
-    .build()
+private val FAKE_REQUISITION_SPEC = requisitionSpec {
+  measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
+  nonce = NONCE
+}
 
 private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
 
@@ -146,21 +143,7 @@ class DataProviderClientTest {
       )
     assertThat(requisitionSpecAndFingerprint.signedRequisitionSpec).isEqualTo(signedRequisitionSpec)
     assertThat(HexString(requisitionSpecAndFingerprint.requisitionFingerprint))
-      .isEqualTo(
-        HexString(
-          "4B4DFB2EA760051972FA3BA3F49F23584C632898FB51DD8D795B2E043BD441A90F9070C4451" +
-            "61BD837740950AC28425AE486E874F96AA7D61AC229327B88A1A5736F6D652D73657269616C697A656" +
-            "42D6D6561737572656D656E742D73706563"
-        )
-      )
-
-    val dataProviderParticipation =
-      signRequisitionFingerprint(
-        requisitionFingerprint = requisitionSpecAndFingerprint.requisitionFingerprint,
-        consentSignalingPrivateKeyHandle = edpPrivateKeyHandle,
-        consentSignalingCertificate = EDP_CERTIFICATE,
-      )
-    assertTrue(EDP_CERTIFICATE.verifySignature(dataProviderParticipation))
+      .isEqualTo(HexString("3371F2501D5AAC71C4CE6D5884E3EB359BC3B6DBD4BD4C7FAD3C8D3C9730F441"))
   }
 
   @Test
