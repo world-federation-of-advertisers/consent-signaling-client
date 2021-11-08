@@ -31,7 +31,15 @@ def consent_signaling_client_repositories():
 
     http_archive(
         name = "wfa_measurement_proto",
-        sha256 = "4385a6ae12684d8896affdd60c19a470b284623b5094685dd3a616fd30178c52",
-        strip_prefix = "cross-media-measurement-api-0.9.0",
-        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.9.0.tar.gz",
+        sha256 = "e78eb725b27815f353bbae2810100dbab993486568ee20fb366ce9e309855b3c",
+        strip_prefix = "cross-media-measurement-api-0.13.0",
+        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.13.0.tar.gz",
+    )
+    http_archive(
+        name = "wfa_measurement_proto",
+        sha256 = "b0f4f4de3dfaff38b725742665a9faa8a7ac4533b5f1d4efbb6c021324a0e2bc",
+        # TODO(world-federation-of-advertisers/cross-media-measurement-api#62):
+        # Switch to official release version once PR changes are released.
+        strip_prefix = "cross-media-measurement-api-0.12.0-rc1",
+        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.12.0-rc1.tar.gz",
     )
