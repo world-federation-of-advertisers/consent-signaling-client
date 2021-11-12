@@ -31,7 +31,7 @@ def consent_signaling_client_repositories():
 
     http_archive(
         name = "wfa_measurement_proto",
-        sha256 = "4385a6ae12684d8896affdd60c19a470b284623b5094685dd3a616fd30178c52",
-        strip_prefix = "cross-media-measurement-api-0.9.0",
-        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.9.0.tar.gz",
+        sha256 = "611bbc8c653868c1dbc973a520a192d8ac1678375167181354fc9b1bc8e3a3ea",
+        strip_prefix = "cross-media-measurement-api-0.14.0",
+        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.14.0.tar.gz",
     )
