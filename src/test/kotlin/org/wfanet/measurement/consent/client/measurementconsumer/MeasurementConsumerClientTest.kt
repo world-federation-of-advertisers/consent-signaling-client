@@ -17,7 +17,6 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.BeforeClass
 import org.junit.Test
@@ -74,6 +73,8 @@ private const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
 private val AGG_CERTIFICATE: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
 private const val AGG_PRIVATE_KEY_HANDLE_KEY = "agg1"
 
+private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
+
 @RunWith(JUnit4::class)
 class MeasurementConsumerClientTest {
   companion object {
@@ -118,7 +119,7 @@ class MeasurementConsumerClientTest {
       RequisitionSpec.newBuilder()
         .apply {
           measurementPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY.toByteString()
-          dataProviderListHash = ByteString.copyFromUtf8("testDataProviderListHash")
+          nonce = NONCE
         }
         .build()
     val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
@@ -129,7 +130,7 @@ class MeasurementConsumerClientTest {
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
         measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertTrue(MC_CERTIFICATE.verifySignature(signedResult))
+    assertThat(MC_CERTIFICATE.verifySignature(signedResult)).isTrue()
   }
 
   @Test
@@ -166,7 +167,7 @@ class MeasurementConsumerClientTest {
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
         measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertTrue(MC_CERTIFICATE.verifySignature(signedMeasurementSpec))
+    assertThat(MC_CERTIFICATE.verifySignature(signedMeasurementSpec)).isTrue()
   }
 
   @Test
@@ -183,7 +184,7 @@ class MeasurementConsumerClientTest {
         privateKeyHandle = privateKeyHandle,
         measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertTrue(MC_CERTIFICATE.verifySignature(signedEncryptionPublicKey))
+    assertThat(MC_CERTIFICATE.verifySignature(signedEncryptionPublicKey)).isTrue()
   }
 
   @Test
@@ -208,13 +209,14 @@ class MeasurementConsumerClientTest {
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
     assertThat(signedResult).isEqualTo(decryptedSignedDataResult)
-    assertTrue(
-      verifyResult(
-        resultSignature = decryptedSignedDataResult.signature,
-        measurementResult = decryptedResult,
-        aggregatorCertificate = AGG_CERTIFICATE,
+    assertThat(
+        verifyResult(
+          resultSignature = decryptedSignedDataResult.signature,
+          measurementResult = decryptedResult,
+          aggregatorCertificate = AGG_CERTIFICATE,
+        )
       )
-    )
+      .isTrue()
     assertThat(FAKE_MEASUREMENT_RESULT.reach.value).isEqualTo(decryptedResult.reach.value)
   }
 
@@ -229,13 +231,14 @@ class MeasurementConsumerClientTest {
         certificate = AGG_CERTIFICATE
       )
 
-    assertTrue(
-      verifyResult(
-        resultSignature = signedResult.signature,
-        measurementResult = FAKE_MEASUREMENT_RESULT,
-        aggregatorCertificate = AGG_CERTIFICATE,
+    assertThat(
+        verifyResult(
+          resultSignature = signedResult.signature,
+          measurementResult = FAKE_MEASUREMENT_RESULT,
+          aggregatorCertificate = AGG_CERTIFICATE,
+        )
       )
-    )
+      .isTrue()
   }
 
   @Test
@@ -249,12 +252,13 @@ class MeasurementConsumerClientTest {
         certificate = EDP_CERTIFICATE
       )
 
-    assertTrue(
-      verifyEncryptionPublicKey(
-        encryptionPublicKeySignature = signedEncryptionPublicKey.signature,
-        encryptionPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY,
-        edpCertificate = EDP_CERTIFICATE,
+    assertThat(
+        verifyEncryptionPublicKey(
+          encryptionPublicKeySignature = signedEncryptionPublicKey.signature,
+          encryptionPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY,
+          edpCertificate = EDP_CERTIFICATE,
+        )
       )
-    )
+      .isTrue()
   }
 }

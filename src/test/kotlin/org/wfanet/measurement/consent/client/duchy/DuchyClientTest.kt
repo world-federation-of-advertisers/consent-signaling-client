@@ -18,21 +18,21 @@ import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import java.security.PrivateKey
 import java.security.cert.X509Certificate
-import java.util.Base64
 import java.util.Random
-import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
-import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.copy
+import org.wfanet.measurement.api.v2alpha.measurementSpec
+import org.wfanet.measurement.api.v2alpha.requisitionSpec
+import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
-import org.wfanet.measurement.common.crypto.testing.FIXED_SERVER_CERT_PEM_FILE as EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
@@ -41,66 +41,100 @@ import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 
+private const val NONCE = -7452112597811743614L // Hex: 9894C7134537B482
+private val NONCE_HASH =
+  HexString("A4EA9C2984AE1D0F7D0B026B0BB41C136FC0767E29DF40951CFE019B7D9F1CE1")
+private const val NONCE_2 = -3060866405677570814L // Hex: D5859E38A0A96502
+private val NONCE_2_HASH =
+  HexString("45FEAA185D434E0EB4747F547F0918AA5B8403DBBD7F90D6F0D8C536E2D620D7")
+
 // TODO Switch this to real cryptography
-private val SOME_DATA_PROVIDER_LIST_SALT = ByteString.copyFromUtf8("some-salt-0")
-private val SOME_SERIALIZED_DATA_PROVIDER_LIST = ByteString.copyFromUtf8("some-data-provider-list")
 private val DATA_PROVIDER_PUBLIC_KEY =
   EncryptionPublicKey.newBuilder()
     .apply { data = ByteString.copyFromUtf8("some-public-key") }
     .build()
-/** We use a fixed certificate so we can verify the signature against a known certificate. */
-private val DATA_PROVIDER_X509: X509Certificate = readCertificate(EDP_1_CERT_PEM_FILE)
-private val SOME_REQUISITION_SPEC =
-  RequisitionSpec.newBuilder()
-    .apply {
-      dataProviderListHash =
-        hashSha256(SOME_SERIALIZED_DATA_PROVIDER_LIST.concat(SOME_DATA_PROVIDER_LIST_SALT))
-    }
-    .build()
-    .toByteString()
-private val SOME_SERIALIZED_MEASUREMENT_SPEC =
-  ByteString.copyFromUtf8("some-serialized-measurement-spec")
-/** This is pre-calculated using a fixed certificate from common-jvm. */
-private val DATA_PROVIDER_SIGNATURE: ByteString =
-  ByteString.copyFrom(
-    Base64.getDecoder()
-      .decode(
-        "MEUCIQDPd2A85kgBbOGyeeNGlzcRO+uLK6qT9TkHSUDcejHu1wIgGv2YA4xAME8nZrjSbjOu5CTi/" +
-          "ilgis7bMXA5iSgSdRE="
-      )
-  )
+private val REQUISITION_SPEC = requisitionSpec { nonce = NONCE }
+private val MEASUREMENT_SPEC = measurementSpec { nonceHashes += NONCE_HASH.bytes }
 
 @RunWith(JUnit4::class)
 class DuchyClientTest {
   @Test
-  fun `duchy verifies edp participation signature`() = runBlocking {
-    /** Pre-computing values passed to duchy from kingdom */
+  fun `verifyRequisitionFulfillment returns true when verified`() = runBlocking {
+    // Compute what Duchy would store from Kingdom data.
     val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-    val someEncryptedRequisitionSpec =
-      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, SOME_REQUISITION_SPEC)
-    // There is no salt when hashing the encrypted requisition spec
-    val someRequisitionSpecHash = hashSha256(someEncryptedRequisitionSpec)
+    val encryptedRequisitionSpec =
+      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, REQUISITION_SPEC.toByteString())
+    val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
+    val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
+    val requisitionFingerprint =
+      computeRequisitionFingerprint(serializedMeasurementSpec, requisitionSpecHash)
+    val requisition = Requisition(requisitionFingerprint, NONCE_HASH.bytes)
 
-    /** Items already known to the duchy */
-    val computation =
-      Computation(
-        dataProviderList = SOME_SERIALIZED_DATA_PROVIDER_LIST,
-        dataProviderListSalt = SOME_DATA_PROVIDER_LIST_SALT,
-        measurementSpec = SOME_SERIALIZED_MEASUREMENT_SPEC,
+    assertThat(
+        verifyRequisitionFulfillment(
+          measurementSpec = MEASUREMENT_SPEC,
+          requisition = requisition,
+          requisitionFingerprint = requisitionFingerprint,
+          nonce = NONCE
+        )
       )
-    val requisition =
-      Requisition(
-        dataProviderCertificate = DATA_PROVIDER_X509,
-        requisitionSpecHash = someRequisitionSpecHash
-      )
+      .isTrue()
+  }
 
-    assertTrue(
-      verifyDataProviderParticipation(
-        dataProviderParticipationSignature = DATA_PROVIDER_SIGNATURE,
-        computation = computation,
-        requisition = requisition
+  @Test
+  fun `verifyRequisitionFulfillment returns false when nonce doesn't match`() = runBlocking {
+    // Compute what Duchy would store from Kingdom data.
+    val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
+    val encryptedRequisitionSpec =
+      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, REQUISITION_SPEC.toByteString())
+    val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
+    val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
+    val requisitionFingerprint =
+      computeRequisitionFingerprint(serializedMeasurementSpec, requisitionSpecHash)
+    val requisition = Requisition(requisitionFingerprint, NONCE_HASH.bytes)
+
+    assertThat(
+        verifyRequisitionFulfillment(
+          measurementSpec = MEASUREMENT_SPEC,
+          requisition = requisition,
+          requisitionFingerprint = requisitionFingerprint,
+          nonce = 404L
+        )
       )
-    )
+      .isFalse()
+  }
+
+  @Test
+  fun `verifyDataProviderParticipation returns true when verified`() = runBlocking {
+    assertThat(
+        verifyDataProviderParticipation(
+          MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
+          listOf(NONCE, NONCE_2)
+        )
+      )
+      .isTrue()
+  }
+
+  @Test
+  fun `verifyDataProviderParticipation returns false when missing a nonce`() = runBlocking {
+    assertThat(
+        verifyDataProviderParticipation(
+          MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
+          listOf(NONCE)
+        )
+      )
+      .isFalse()
+  }
+
+  @Test
+  fun `verifyDataProviderParticipation returns false when nonce mismatches hash`() = runBlocking {
+    assertThat(
+        verifyDataProviderParticipation(
+          MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
+          listOf(NONCE, 404L)
+        )
+      )
+      .isFalse()
   }
 
   @Test
@@ -128,7 +162,7 @@ class DuchyClientTest {
         aggregatorKeyHandle = aggregatorPrivateKeyHandle,
         aggregatorCertificate = aggregatorX509,
       )
-    assertTrue(aggregatorX509.verifySignature(signedResult))
+    assertThat(aggregatorX509.verifySignature(signedResult)).isTrue()
   }
 
   @Test
