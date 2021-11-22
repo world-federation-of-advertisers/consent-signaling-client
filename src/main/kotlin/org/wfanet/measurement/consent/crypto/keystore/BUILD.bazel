@@ -9,6 +9,7 @@ kt_jvm_library(
         "//imports/java/com/google/crypto/tink",
         "//src/main/proto/wfa/measurement/api/v2alpha:certificate_kt_jvm_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_kt_jvm_proto",
+        "@wfa_common_jvm//imports/java/com/google/protobuf",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:security_provider",
     ],
 )
