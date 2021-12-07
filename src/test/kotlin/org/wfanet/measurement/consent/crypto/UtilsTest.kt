@@ -27,6 +27,7 @@ import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.crypto.hybridencryption.EciesCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
@@ -61,7 +62,7 @@ class UtilsTest {
         certificate = certificate
       )
     assertThat(signedMessage.data).isEqualTo(someMeasurementResult.toByteString())
-    assertTrue(certificate.verifySignature(signedMessage))
+    assertTrue(certificate.verifySignature(signedMessage.data, signedMessage.signature))
   }
 
   @Test

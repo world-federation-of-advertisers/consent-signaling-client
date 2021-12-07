@@ -19,6 +19,7 @@ import java.security.PrivateKey
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.signedData
+import org.wfanet.measurement.common.crypto.sign
 import org.wfanet.measurement.consent.crypto.hybridencryption.EciesCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle

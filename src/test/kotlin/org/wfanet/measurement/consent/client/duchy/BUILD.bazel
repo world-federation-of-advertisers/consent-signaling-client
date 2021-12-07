@@ -6,7 +6,6 @@ kt_jvm_test(
     test_class = "org.wfanet.measurement.consent.client.duchy.DuchyClientTest",
     deps = [
         "//src/main/kotlin/org/wfanet/measurement/consent/client/duchy",
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption/testing",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
@@ -19,6 +18,7 @@ kt_jvm_test(
         "@wfa_common_jvm//imports/java/com/google/common/truth",
         "@wfa_common_jvm//imports/java/org/junit",
         "@wfa_common_jvm//imports/kotlin/org/mockito/kotlin",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:signatures",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing",
     ],
 )
