@@ -30,13 +30,13 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.duchy.encryptResult
 import org.wfanet.measurement.consent.client.duchy.signResult
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
@@ -130,7 +130,7 @@ class MeasurementConsumerClientTest {
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
         measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertThat(MC_CERTIFICATE.verifySignature(signedResult)).isTrue()
+    assertThat(MC_CERTIFICATE.verifySignature(signedResult.data, signedResult.signature)).isTrue()
   }
 
   @Test
@@ -167,7 +167,10 @@ class MeasurementConsumerClientTest {
         measurementConsumerPrivateKeyHandle = privateKeyHandle,
         measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertThat(MC_CERTIFICATE.verifySignature(signedMeasurementSpec)).isTrue()
+    assertThat(
+        MC_CERTIFICATE.verifySignature(signedMeasurementSpec.data, signedMeasurementSpec.signature)
+      )
+      .isTrue()
   }
 
   @Test
@@ -184,7 +187,13 @@ class MeasurementConsumerClientTest {
         privateKeyHandle = privateKeyHandle,
         measurementConsumerCertificate = MC_CERTIFICATE,
       )
-    assertThat(MC_CERTIFICATE.verifySignature(signedEncryptionPublicKey)).isTrue()
+    assertThat(
+        MC_CERTIFICATE.verifySignature(
+          signedEncryptionPublicKey.data,
+          signedEncryptionPublicKey.signature
+        )
+      )
+      .isTrue()
   }
 
   @Test

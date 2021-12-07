@@ -7,7 +7,6 @@ kt_jvm_test(
     deps = [
         "//src/main/kotlin/org/wfanet/measurement/consent/client/dataprovider",
         "//src/main/kotlin/org/wfanet/measurement/consent/client/measurementconsumer",
-        "//src/main/kotlin/org/wfanet/measurement/consent/crypto:signatures",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption/testing",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
@@ -19,6 +18,7 @@ kt_jvm_test(
         "//src/main/proto/wfa/measurement/api/v2alpha:requisition_spec_kt_jvm_proto",
         "@wfa_common_jvm//imports/java/com/google/common/truth",
         "@wfa_common_jvm//imports/java/org/junit",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:signatures",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing",
     ],
 )
