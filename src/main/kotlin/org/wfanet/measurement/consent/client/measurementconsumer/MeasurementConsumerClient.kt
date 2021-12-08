@@ -21,12 +21,13 @@ import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResul
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
-import org.wfanet.measurement.consent.crypto.signMessage
 
 /** Create a SHA256 hash of the serialized [dataProviderList] using the [dataProviderListSalt]. */
 fun createDataProviderListHash(
@@ -39,18 +40,13 @@ fun createDataProviderListHash(
 /**
  * Signs [requisitionSpec] into a [SignedData].
  *
- * The [measurementConsumerCertificate] determines the algorithm type of the signature.
+ * The [measurementConsumerSigningKey] determines the algorithm type of the signature.
  */
-suspend fun signRequisitionSpec(
+fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
-  measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerCertificate: X509Certificate
+  measurementConsumerSigningKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(
-    message = requisitionSpec,
-    privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = measurementConsumerCertificate
-  )
+  return signMessage(requisitionSpec, measurementConsumerSigningKey)
 }
 
 /**
@@ -69,31 +65,21 @@ fun encryptRequisitionSpec(
 /**
  * Signs [measurementSpec] into a [SignedData].
  *
- * [measurementConsumerCertificate] determines the algorithm type of the signature.
+ * [measurementConsumerSigningKey] determines the algorithm type of the signature.
  */
-suspend fun signMeasurementSpec(
+fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
-  measurementConsumerPrivateKeyHandle: PrivateKeyHandle,
-  measurementConsumerCertificate: X509Certificate
+  measurementConsumerSigningKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(
-    message = measurementSpec,
-    privateKeyHandle = measurementConsumerPrivateKeyHandle,
-    certificate = measurementConsumerCertificate
-  )
+  return signMessage(measurementSpec, measurementConsumerSigningKey)
 }
 
 /** Signs the measurementConsumer's encryptionPublicKey. */
-suspend fun signEncryptionPublicKey(
+fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
-  privateKeyHandle: PrivateKeyHandle,
-  measurementConsumerCertificate: X509Certificate
+  signingKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(
-    message = encryptionPublicKey,
-    privateKeyHandle = privateKeyHandle,
-    certificate = measurementConsumerCertificate
-  )
+  return signMessage(encryptionPublicKey, signingKey)
 }
 
 /**

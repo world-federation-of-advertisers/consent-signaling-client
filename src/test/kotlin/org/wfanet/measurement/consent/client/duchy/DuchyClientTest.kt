@@ -40,6 +40,7 @@ import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.readSigningKeyHandle
 
 private const val NONCE = -7452112597811743614L // Hex: 9894C7134537B482
 private val NONCE_HASH =
@@ -139,8 +140,6 @@ class DuchyClientTest {
 
   @Test
   fun `duchy sign result`() = runBlocking {
-    val keyStore = InMemoryKeyStore()
-    val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
     val someMeasurementResult =
       MeasurementResult.newBuilder()
         .apply {
@@ -148,21 +147,18 @@ class DuchyClientTest {
           frequency = MeasurementResult.Frequency.getDefaultInstance()
         }
         .build()
-    val aggregatorPrivateKeyHandleKey = "some arbitrary key"
-    val aggregatorPrivateKey: PrivateKey =
-      readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.publicKey.algorithm)
-    val aggregatorPrivateKeyHandle =
-      keyStore.storePrivateKeyDer(
-        aggregatorPrivateKeyHandleKey,
-        ByteString.copyFrom(aggregatorPrivateKey.encoded)
-      )
     val signedResult =
       signResult(
         measurementResult = someMeasurementResult,
-        aggregatorKeyHandle = aggregatorPrivateKeyHandle,
-        aggregatorCertificate = aggregatorX509,
+        aggregatorSigningKey = AGGREGATOR_SIGNING_KEY,
       )
-    assertThat(aggregatorX509.verifySignature(signedResult.data, signedResult.signature)).isTrue()
+    assertThat(
+        AGGREGATOR_SIGNING_KEY.certificate.verifySignature(
+          signedResult.data,
+          signedResult.signature
+        )
+      )
+      .isTrue()
   }
 
   @Test
@@ -197,5 +193,10 @@ class DuchyClientTest {
         reversingHybridCryptor.decrypt(aggregatorPrivateKeyHandle, encryptedSignedResult)
       )
     assertThat(decryptedSignedResult).isEqualTo(someSignedMeasurementResult)
+  }
+
+  companion object {
+    private val AGGREGATOR_SIGNING_KEY =
+      readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
   }
 }
