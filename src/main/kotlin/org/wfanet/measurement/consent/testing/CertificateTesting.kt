@@ -16,6 +16,9 @@ package org.wfanet.measurement.consent.testing
 
 import java.io.File
 import java.nio.file.Paths
+import org.wfanet.measurement.common.crypto.SigningKeyHandle
+import org.wfanet.measurement.common.crypto.readCertificate
+import org.wfanet.measurement.common.crypto.readPrivateKey
 
 private val TESTDATA_DIR_PATH =
   Paths.get(
@@ -33,6 +36,14 @@ private fun loadTestFile(filename: String): File =
   requireNotNull(TESTDATA_DIR_PATH.resolve(filename).toFile()) {
     "Test resource file not found: $filename"
   }
+
+fun readSigningKeyHandle(certificatePem: File, privateKeyPem: File): SigningKeyHandle {
+  val certificate = readCertificate(certificatePem)
+  return SigningKeyHandle(
+    certificate,
+    readPrivateKey(privateKeyPem, certificate.publicKey.algorithm)
+  )
+}
 
 val EDP_1_CERT_PEM_FILE = loadTestFile("edp_1.pem")
 val EDP_1_KEY_FILE = loadTestFile("edp_1.key")

@@ -15,27 +15,20 @@
 package org.wfanet.measurement.consent.crypto
 
 import com.google.protobuf.Message
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.signedData
-import org.wfanet.measurement.common.crypto.sign
+import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.consent.crypto.hybridencryption.EciesCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
 
-/** Generic for signing [Message]s. Used by client functions to show consent. */
-suspend fun <T : Message> signMessage(
-  message: T,
-  privateKeyHandle: PrivateKeyHandle,
-  certificate: X509Certificate,
-): SignedData {
-  val messageData = message.toByteString()
-  val privateKey: PrivateKey = requireNotNull(privateKeyHandle.toJavaPrivateKey(certificate))
-  val messageSignature = privateKey.sign(certificate = certificate, data = messageData)
+/** Signs [message], returning a [SignedData]. */
+fun <T : Message> signMessage(message: T, signingKeyHandle: SigningKeyHandle): SignedData {
+  val serializedMessage = message.toByteString()
+  val signature = signingKeyHandle.sign(serializedMessage)
+
   return signedData {
-    data = messageData
-    signature = messageSignature
+    data = serializedMessage
+    this.signature = signature
   }
 }
 
