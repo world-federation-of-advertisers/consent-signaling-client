@@ -33,11 +33,11 @@ import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
 import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.verifySignature
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 
@@ -162,7 +162,7 @@ class DuchyClientTest {
         aggregatorKeyHandle = aggregatorPrivateKeyHandle,
         aggregatorCertificate = aggregatorX509,
       )
-    assertThat(aggregatorX509.verifySignature(signedResult)).isTrue()
+    assertThat(aggregatorX509.verifySignature(signedResult.data, signedResult.signature)).isTrue()
   }
 
   @Test

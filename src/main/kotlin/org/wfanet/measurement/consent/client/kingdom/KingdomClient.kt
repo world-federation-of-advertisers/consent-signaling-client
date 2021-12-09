@@ -17,7 +17,7 @@ package org.wfanet.measurement.consent.client.kingdom
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
-import org.wfanet.measurement.consent.crypto.verifySignature
+import org.wfanet.measurement.common.crypto.verifySignature
 
 /**
  * Verify the MeasurementSpec from the MeasurementConsumer
