@@ -18,15 +18,15 @@ import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
-import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
+import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
-import org.wfanet.measurement.consent.crypto.signMessage
 
 /** Data about a Requisition that Duchy received from Kingdom. */
 data class Requisition(
@@ -77,21 +77,12 @@ fun verifyDataProviderParticipation(
     computedNonceHashes.containsAll(measurementSpec.nonceHashesList)
 }
 
-/**
- * Signs [measurementResult] into a [SignedData] ProtoBuf. The [aggregatorCertificate] is required
- * to determine the algorithm type of the signature
- */
-suspend fun signResult(
-  measurementResult: MeasurementResult,
-  /** This private key is paired with the [aggregatorCertificate] */
-  aggregatorKeyHandle: PrivateKeyHandle,
-  aggregatorCertificate: X509Certificate
+/** Signs [measurementResult] into a [SignedData] using [aggregatorSigningKey]. */
+fun signResult(
+  measurementResult: Measurement.Result,
+  aggregatorSigningKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(
-    message = measurementResult,
-    privateKeyHandle = aggregatorKeyHandle,
-    certificate = aggregatorCertificate
-  )
+  return signMessage(measurementResult, aggregatorSigningKey)
 }
 
 /**
@@ -107,21 +98,12 @@ fun encryptResult(
   return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
 }
 
-/**
- * Signs [elgamalPublicKey] into a [SignedData] ProtoBuf. The [duchyCertificate] is required to
- * determine the algorithm type of the signature
- */
-suspend fun signElgamalPublicKey(
-  elgamalPublicKey: ElGamalPublicKey,
-  /** This private key is paired with the [duchyCertificate] */
-  duchyKeyHandle: PrivateKeyHandle,
-  duchyCertificate: X509Certificate
+/** Signs [elGamalPublicKey] into a [SignedData] using [duchySigningKey]. */
+fun signElgamalPublicKey(
+  elGamalPublicKey: ElGamalPublicKey,
+  duchySigningKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(
-    message = elgamalPublicKey,
-    privateKeyHandle = duchyKeyHandle,
-    certificate = duchyCertificate
-  )
+  return signMessage(elGamalPublicKey, duchySigningKey)
 }
 
 /**

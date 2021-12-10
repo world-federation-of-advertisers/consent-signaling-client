@@ -6,6 +6,7 @@ kt_jvm_library(
     name = "dataprovider",
     srcs = ["DataProviderClient.kt"],
     deps = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/client/common:signing",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:utils",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",
@@ -14,7 +15,6 @@ kt_jvm_library(
         "//src/main/proto/wfa/measurement/api/v2alpha:requisition_kt_jvm_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:requisition_spec_kt_jvm_proto",
         "@wfa_common_jvm//imports/java/com/google/protobuf",
-        "@wfa_common_jvm//imports/java/org/conscrypt",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:hashing",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:signatures",
     ],
