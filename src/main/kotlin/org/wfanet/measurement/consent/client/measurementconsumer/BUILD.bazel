@@ -6,6 +6,7 @@ kt_jvm_library(
     name = "measurementconsumer",
     srcs = ["MeasurementConsumerClient.kt"],
     deps = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/client/common:signing",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto:utils",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/hybridencryption",
         "//src/main/kotlin/org/wfanet/measurement/consent/crypto/keystore",

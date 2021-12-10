@@ -32,10 +32,10 @@ import org.wfanet.measurement.api.v2alpha.requisitionSpec
 import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
 import org.wfanet.measurement.consent.client.measurementconsumer.signRequisitionSpec
 import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
-import org.wfanet.measurement.consent.crypto.signMessage
 import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
@@ -43,6 +43,7 @@ import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.readSigningKeyHandle
 
 private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
 private val NONCE_HASH =
@@ -80,33 +81,6 @@ private const val DUCHY_PRIVATE_KEY_HANDLE_KEY = "duchy1"
 
 @RunWith(JUnit4::class)
 class DataProviderClientTest {
-  companion object {
-    @BeforeClass
-    @JvmStatic
-    fun initializePrivateKeyKeystore() {
-      runBlocking {
-        keyStore.storePrivateKeyDer(
-          MC_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(
-            readPrivateKey(MC_1_KEY_FILE, MC_CERTIFICATE.publicKey.algorithm).encoded
-          )
-        )
-        keyStore.storePrivateKeyDer(
-          EDP_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(
-            readPrivateKey(EDP_1_KEY_FILE, EDP_CERTIFICATE.publicKey.algorithm).encoded
-          )
-        )
-        keyStore.storePrivateKeyDer(
-          DUCHY_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(
-            readPrivateKey(DUCHY_1_NON_AGG_KEY_FILE, DUCHY_CERTIFICATE.publicKey.algorithm).encoded
-          )
-        )
-      }
-    }
-  }
-
   @Test
   fun `data provider calculates requisition participation signature`() = runBlocking {
     val edpPrivateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
@@ -146,20 +120,14 @@ class DataProviderClientTest {
 
   @Test
   fun `verifyMeasurementSpec verifies valid MeasurementSpec signature`() = runBlocking {
-    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    checkNotNull(privateKeyHandle)
-    val signedMeasurementSpec =
-      signMessage(
-        message = FAKE_MEASUREMENT_SPEC,
-        privateKeyHandle = privateKeyHandle,
-        certificate = MC_CERTIFICATE
-      )
+    val signingKeyHandle = MC_SIGNING_KEY
+    val signedMeasurementSpec: SignedData = signMessage(FAKE_MEASUREMENT_SPEC, signingKeyHandle)
 
     assertThat(
         verifyMeasurementSpec(
           measurementSpecSignature = signedMeasurementSpec.signature,
           measurementSpec = FAKE_MEASUREMENT_SPEC,
-          measurementConsumerCertificate = MC_CERTIFICATE,
+          measurementConsumerCertificate = signingKeyHandle.certificate,
         )
       )
       .isTrue()
@@ -168,15 +136,7 @@ class DataProviderClientTest {
   @Test
   fun `decryptRequistionSpec returns decrypted RequistionSpec`() = runBlocking {
     // Encrypt a RequisitionSpec (as SignedData) using the Measurement Consumer Functions
-    val measurementConsumerPrivateKeyHandle =
-      keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    checkNotNull(measurementConsumerPrivateKeyHandle)
-    val signedRequisitionSpec =
-      signRequisitionSpec(
-        FAKE_REQUISITION_SPEC,
-        measurementConsumerPrivateKeyHandle,
-        MC_CERTIFICATE
-      )
+    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
     val encryptedRequisitionSpec =
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
@@ -201,7 +161,7 @@ class DataProviderClientTest {
         verifyRequisitionSpec(
           requisitionSpecSignature = decryptedSignedDataRequisitionSpec.signature,
           requisitionSpec = decryptedRequisitionSpec,
-          measurementConsumerCertificate = MC_CERTIFICATE,
+          measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
           measurementSpec = FAKE_MEASUREMENT_SPEC,
         )
       )
@@ -210,21 +170,13 @@ class DataProviderClientTest {
 
   @Test
   fun `verifyRequistionSpec verifies valid RequistionSpec signature`() = runBlocking {
-    val measurementConsumerPrivateKeyHandle =
-      keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    checkNotNull(measurementConsumerPrivateKeyHandle)
-    val signedRequisitionSpec =
-      signRequisitionSpec(
-        FAKE_REQUISITION_SPEC,
-        measurementConsumerPrivateKeyHandle,
-        MC_CERTIFICATE
-      )
+    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
 
     assertThat(
         verifyRequisitionSpec(
           requisitionSpecSignature = signedRequisitionSpec.signature,
           requisitionSpec = FAKE_REQUISITION_SPEC,
-          measurementConsumerCertificate = MC_CERTIFICATE,
+          measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
           measurementSpec = FAKE_MEASUREMENT_SPEC,
         )
       )
@@ -233,22 +185,47 @@ class DataProviderClientTest {
 
   @Test
   fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
-    val privateKeyHandle = keyStore.getPrivateKeyHandle(DUCHY_PRIVATE_KEY_HANDLE_KEY)
-    checkNotNull(privateKeyHandle)
-    val signedElGamalPublicKey =
-      signMessage<ElGamalPublicKey>(
-        message = FAKE_EL_GAMAL_PUBLIC_KEY,
-        privateKeyHandle = privateKeyHandle,
-        certificate = DUCHY_CERTIFICATE
-      )
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
 
     assertThat(
         verifyElGamalPublicKey(
           elGamalPublicKeySignature = signedElGamalPublicKey.signature,
           elGamalPublicKey = FAKE_EL_GAMAL_PUBLIC_KEY,
-          duchyCertificate = DUCHY_CERTIFICATE,
+          duchyCertificate = signingKeyHandle.certificate,
         )
       )
       .isTrue()
+  }
+
+  companion object {
+    private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
+    private val DUCHY_SIGNING_KEY =
+      readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+
+    @BeforeClass
+    @JvmStatic
+    fun initializePrivateKeyKeystore() {
+      runBlocking {
+        keyStore.storePrivateKeyDer(
+          MC_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(MC_1_KEY_FILE, MC_CERTIFICATE.publicKey.algorithm).encoded
+          )
+        )
+        keyStore.storePrivateKeyDer(
+          EDP_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(EDP_1_KEY_FILE, EDP_CERTIFICATE.publicKey.algorithm).encoded
+          )
+        )
+        keyStore.storePrivateKeyDer(
+          DUCHY_PRIVATE_KEY_HANDLE_KEY,
+          ByteString.copyFrom(
+            readPrivateKey(DUCHY_1_NON_AGG_KEY_FILE, DUCHY_CERTIFICATE.publicKey.algorithm).encoded
+          )
+        )
+      }
+    }
   }
 }
