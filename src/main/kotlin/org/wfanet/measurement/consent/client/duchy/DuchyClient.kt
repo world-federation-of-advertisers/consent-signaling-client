@@ -25,8 +25,7 @@ import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
-import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
+import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 
 /** Data about a Requisition that Duchy received from Kingdom. */
 data class Requisition(
@@ -85,17 +84,12 @@ fun signResult(
   return signMessage(measurementResult, aggregatorSigningKey)
 }
 
-/**
- * Encrypts the [SignedData] of the measurement results using the specified [HybridCryptor]
- * specified by [hybridEncryptionMapper].
- */
+/** Encrypts the signed [Measurement.Result]. */
 fun encryptResult(
   signedResult: SignedData,
   measurementPublicKey: EncryptionPublicKey,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
 ): ByteString {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
-  return hybridCryptor.encrypt(measurementPublicKey, signedResult.toByteString())
+  return measurementPublicKey.toPublicKeyHandle().hybridEncrypt(signedResult.toByteString())
 }
 
 /** Signs [elGamalPublicKey] into a [SignedData] using [duchySigningKey]. */
