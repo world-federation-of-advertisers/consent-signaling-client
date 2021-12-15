@@ -21,46 +21,9 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
-import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
-
-@Deprecated("Use computeRequisitionFingerprint and decryptRequisitionSpec.")
-data class RequisitionSpecAndFingerprint(
-  /** Decrypted Signed RequisitionSpec */
-  val signedRequisitionSpec: SignedData,
-  /** Generated Requisition Fingerprint */
-  val requisitionFingerprint: ByteString,
-)
-/**
- * Decrypts the RequisitionSpec from the [requisition] and generates the RequisitionFingerprint
- *
- * A RequisitionFingerprint is the concatenation of a. The SHA-256 hash of the encrypted
- * RequisitionSpec b. The ParticipantListHash c. The serialized MeasurementSpec
- *
- * We assume the signed [requisition].measurementSpec was verified when the requisition was
- * initially received by the data provider.
- *
- * @return a [RequisitionSpecAndFingerprint] containing the decrypted RequisitionSpec and generated
- * RequisitionFingerprint
- */
-@Deprecated("Use computeRequisitionFingerprint and decryptRequisitionSpec.")
-suspend fun decryptRequisitionSpecAndGenerateRequisitionFingerprint(
-  requisition: Requisition,
-  decryptionPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
-): RequisitionSpecAndFingerprint {
-  val requisitionFingerprint = computeRequisitionFingerprint(requisition)
-  val decryptedRequisitionSpec =
-    decryptRequisitionSpec(
-      requisition.encryptedRequisitionSpec,
-      decryptionPrivateKeyHandle,
-      hybridEncryptionMapper
-    )
-  return RequisitionSpecAndFingerprint(decryptedRequisitionSpec, requisitionFingerprint)
-}
 
 /** Computes the "requisition fingerprint" for [requisition]. */
 fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
@@ -87,17 +50,18 @@ fun verifyMeasurementSpec(
 }
 
 /**
- * Decrypts the [encryptedSignedDataRequisitionSpec] of the requisition spec using the specified
- * [HybridCryptor] specified by [hybridEncryptionMapper].
+ * Decrypts a signed [RequisitionSpec].
+ *
+ * @param encryptedSignedDataRequisitionSpec an encrypted [SignedData] containing a
+ * [RequisitionSpec].
+ * @param dataProviderPrivateKey the DataProvider's encryption private key.
  */
-suspend fun decryptRequisitionSpec(
+fun decryptRequisitionSpec(
   encryptedSignedDataRequisitionSpec: ByteString,
-  dataProviderPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  dataProviderPrivateKey: PrivateKeyHandle
 ): SignedData {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
   return SignedData.parseFrom(
-    hybridCryptor.decrypt(dataProviderPrivateKeyHandle, encryptedSignedDataRequisitionSpec)
+    dataProviderPrivateKey.hybridDecrypt(encryptedSignedDataRequisitionSpec)
   )
 }
 
