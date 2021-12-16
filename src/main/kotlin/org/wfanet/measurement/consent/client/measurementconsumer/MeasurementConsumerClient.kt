@@ -21,13 +21,12 @@ import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResul
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
-import org.wfanet.measurement.consent.crypto.getHybridCryptorForCipherSuite
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.PrivateKeyHandle
+import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 
 /** Create a SHA256 hash of the serialized [dataProviderList] using the [dataProviderListSalt]. */
 fun createDataProviderListHash(
@@ -50,16 +49,17 @@ fun signRequisitionSpec(
 }
 
 /**
- * Encrypts the [SignedData] of the requisitionSpec using the specified [HybridCryptor] specified by
- * the [hybridEncryptionMapper].
+ * Encrypts a signed [RequisitionSpec].
+ *
+ * @param signedRequisitionSpec a [SignedData] containing a [RequisitionSpec]
  */
 fun encryptRequisitionSpec(
   signedRequisitionSpec: SignedData,
-  measurementPublicKey: EncryptionPublicKey,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  measurementPublicKey: EncryptionPublicKey
 ): ByteString {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
-  return hybridCryptor.encrypt(measurementPublicKey, signedRequisitionSpec.toByteString())
+  return measurementPublicKey
+    .toPublicKeyHandle()
+    .hybridEncrypt(signedRequisitionSpec.toByteString())
 }
 
 /**
@@ -83,18 +83,16 @@ fun signEncryptionPublicKey(
 }
 
 /**
- * Decrypts the [encryptedSignedDataResult] of the measurement results using the specified
- * [HybridCryptor] specified by the [hybridEncryptionMapper].
+ * Decrypts the encrypted signed [MeasurementResult].
+ *
+ * @param encryptedSignedDataResult an encrypted [SignedData] containing a [MeasurementResult].
+ * @param measurementPrivateKey the encryption private key matching the Measurement public key.
  */
-suspend fun decryptResult(
+fun decryptResult(
   encryptedSignedDataResult: ByteString,
-  measurementPrivateKeyHandle: PrivateKeyHandle,
-  hybridEncryptionMapper: () -> HybridCryptor = ::getHybridCryptorForCipherSuite,
+  measurementPrivateKey: PrivateKeyHandle
 ): SignedData {
-  val hybridCryptor: HybridCryptor = hybridEncryptionMapper()
-  return SignedData.parseFrom(
-    hybridCryptor.decrypt(measurementPrivateKeyHandle, encryptedSignedDataResult)
-  )
+  return SignedData.parseFrom(measurementPrivateKey.hybridDecrypt(encryptedSignedDataResult))
 }
 
 /**

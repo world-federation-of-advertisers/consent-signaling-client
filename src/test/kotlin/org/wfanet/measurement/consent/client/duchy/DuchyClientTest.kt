@@ -16,28 +16,24 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
-import java.security.PrivateKey
-import java.security.cert.X509Certificate
+import com.google.protobuf.kotlin.toByteStringUtf8
 import java.util.Random
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.measurementSpec
-import org.wfanet.measurement.api.v2alpha.requisitionSpec
+import org.wfanet.measurement.api.v2alpha.requisition
+import org.wfanet.measurement.api.v2alpha.signedData
 import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.hashSha256
-import org.wfanet.measurement.common.crypto.readCertificate
-import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
-import org.wfanet.measurement.consent.crypto.hybridencryption.HybridCryptor
-import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
-import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
+import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
+import org.wfanet.measurement.consent.client.dataprovider.computeRequisitionFingerprint
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -49,22 +45,36 @@ private const val NONCE_2 = -3060866405677570814L // Hex: D5859E38A0A96502
 private val NONCE_2_HASH =
   HexString("45FEAA185D434E0EB4747F547F0918AA5B8403DBBD7F90D6F0D8C536E2D620D7")
 
-// TODO Switch this to real cryptography
-private val DATA_PROVIDER_PUBLIC_KEY =
-  EncryptionPublicKey.newBuilder()
-    .apply { data = ByteString.copyFromUtf8("some-public-key") }
-    .build()
-private val REQUISITION_SPEC = requisitionSpec { nonce = NONCE }
 private val MEASUREMENT_SPEC = measurementSpec { nonceHashes += NONCE_HASH.bytes }
 
 @RunWith(JUnit4::class)
 class DuchyClientTest {
   @Test
+  fun `computeRequisitionFingerprint returns Requisition fingerprint`() {
+    // Compute what Duchy would store from Kingdom data.
+    val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
+    val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
+    val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
+
+    val requisitionFingerprint =
+      computeRequisitionFingerprint(serializedMeasurementSpec, requisitionSpecHash)
+
+    // Verify that fingerprint matches the same one that would be computed by Data Provider.
+    assertThat(requisitionFingerprint)
+      .isEqualTo(
+        computeRequisitionFingerprint(
+          requisition {
+            measurementSpec = signedData { data = serializedMeasurementSpec }
+            this.encryptedRequisitionSpec = encryptedRequisitionSpec
+          }
+        )
+      )
+  }
+
+  @Test
   fun `verifyRequisitionFulfillment returns true when verified`() = runBlocking {
     // Compute what Duchy would store from Kingdom data.
-    val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-    val encryptedRequisitionSpec =
-      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, REQUISITION_SPEC.toByteString())
+    val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
     val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
     val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
     val requisitionFingerprint =
@@ -85,9 +95,7 @@ class DuchyClientTest {
   @Test
   fun `verifyRequisitionFulfillment returns false when nonce doesn't match`() = runBlocking {
     // Compute what Duchy would store from Kingdom data.
-    val hybridCryptor: HybridCryptor = ReversingHybridCryptor()
-    val encryptedRequisitionSpec =
-      hybridCryptor.encrypt(DATA_PROVIDER_PUBLIC_KEY, REQUISITION_SPEC.toByteString())
+    val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
     val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
     val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
     val requisitionFingerprint =
@@ -163,36 +171,25 @@ class DuchyClientTest {
 
   @Test
   fun `duchy encrypt result`() = runBlocking {
-    val reversingHybridCryptor = ReversingHybridCryptor()
-    val keyStore = InMemoryKeyStore()
-    val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
-    val someSignedMeasurementResult =
+    val measurementEncryptionKey = TinkPrivateKeyHandle.generateEcies()
+    val measurementPublicKey = measurementEncryptionKey.publicKey.toEncryptionPublicKey()
+    val signedMeasurementResult =
       SignedData.newBuilder()
         .apply {
           data = ByteString.copyFromUtf8("some measurement result")
           signature = ByteString.copyFromUtf8("some measurement result signature")
         }
         .build()
-    val aggregatorPrivateKeyHandleKey = "some arbitrary key"
-    val aggregatorX509: X509Certificate = readCertificate(DUCHY_AGG_CERT_PEM_FILE)
-    val aggregatorPrivateKey: PrivateKey =
-      readPrivateKey(DUCHY_AGG_KEY_FILE, aggregatorX509.publicKey.algorithm)
-    val aggregatorPrivateKeyHandle =
-      keyStore.storePrivateKeyDer(
-        aggregatorPrivateKeyHandleKey,
-        ByteString.copyFrom(aggregatorPrivateKey.encoded)
-      )
+
     val encryptedSignedResult =
       encryptResult(
-        signedResult = someSignedMeasurementResult,
-        measurementPublicKey = measurementPublicKey,
-        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+        signedResult = signedMeasurementResult,
+        measurementPublicKey = measurementPublicKey
       )
+
     val decryptedSignedResult =
-      SignedData.parseFrom(
-        reversingHybridCryptor.decrypt(aggregatorPrivateKeyHandle, encryptedSignedResult)
-      )
-    assertThat(decryptedSignedResult).isEqualTo(someSignedMeasurementResult)
+      SignedData.parseFrom(measurementEncryptionKey.hybridDecrypt(encryptedSignedResult))
+    assertThat(decryptedSignedResult).isEqualTo(signedMeasurementResult)
   }
 
   companion object {

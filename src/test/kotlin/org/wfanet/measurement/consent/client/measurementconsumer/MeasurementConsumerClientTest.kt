@@ -17,7 +17,6 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import kotlinx.coroutines.runBlocking
-import org.junit.BeforeClass
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -27,14 +26,12 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.hashSha256
-import org.wfanet.measurement.common.crypto.readPrivateKey
+import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.duchy.encryptResult
 import org.wfanet.measurement.consent.client.duchy.signResult
-import org.wfanet.measurement.consent.crypto.hybridencryption.testing.ReversingHybridCryptor
-import org.wfanet.measurement.consent.crypto.keystore.testing.InMemoryKeyStore
-import org.wfanet.measurement.consent.crypto.testing.fakeGetHybridCryptorForCipherSuite
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
@@ -42,9 +39,6 @@ import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
-
-private val keyStore = InMemoryKeyStore()
-private val hybridCryptor = ReversingHybridCryptor()
 
 private val FAKE_MEASUREMENT_SPEC = MeasurementSpec.newBuilder().build()
 
@@ -61,13 +55,6 @@ private val FAKE_MEASUREMENT_RESULT =
           .build()
     }
     .build()
-
-private const val MC_PRIVATE_KEY_HANDLE_KEY = "mc1"
-private val MC_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
-
-private const val EDP_PRIVATE_KEY_HANDLE_KEY = "edp1"
-
-private const val AGG_PRIVATE_KEY_HANDLE_KEY = "agg1"
 
 private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
 
@@ -106,7 +93,6 @@ class MeasurementConsumerClientTest {
 
   @Test
   fun `encryptRequisitionSpec returns encrypted RequisitionSpec`() = runBlocking {
-    val measurementPublicKey = EncryptionPublicKey.getDefaultInstance()
     val signedRequisitionSpec =
       SignedData.newBuilder()
         .apply {
@@ -114,17 +100,15 @@ class MeasurementConsumerClientTest {
           signature = ByteString.copyFromUtf8("testRequisitionSpecSignature")
         }
         .build()
+
     val encryptedSignedRequisitionSpec =
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
-        measurementPublicKey = measurementPublicKey,
-        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
+        measurementPublicKey = MEASUREMENT_PUBLIC_KEY
       )
 
-    val privateKeyHandle = keyStore.getPrivateKeyHandle(EDP_PRIVATE_KEY_HANDLE_KEY)
-    checkNotNull(privateKeyHandle)
     val decryptedSignedRequisitionSpec =
-      SignedData.parseFrom(hybridCryptor.decrypt(privateKeyHandle, encryptedSignedRequisitionSpec))
+      SignedData.parseFrom(MEASUREMENT_PRIVATE_KEY.hybridDecrypt(encryptedSignedRequisitionSpec))
     assertThat(decryptedSignedRequisitionSpec).isEqualTo(signedRequisitionSpec)
   }
 
@@ -172,17 +156,10 @@ class MeasurementConsumerClientTest {
     // Encrypt a Result (as SignedData) using the Duchy Aggregator Functions
     val signedResult = signResult(FAKE_MEASUREMENT_RESULT, AGGREGATOR_SIGNING_KEY)
     val encryptedSignedResult =
-      encryptResult(
-        signedResult = signedResult,
-        measurementPublicKey = MC_PUBLIC_KEY,
-        hybridEncryptionMapper = ::fakeGetHybridCryptorForCipherSuite
-      )
+      encryptResult(signedResult = signedResult, measurementPublicKey = MEASUREMENT_PUBLIC_KEY)
 
     // Decrypt the SignedData Result
-    val privateKeyHandle = keyStore.getPrivateKeyHandle(MC_PRIVATE_KEY_HANDLE_KEY)
-    checkNotNull(privateKeyHandle)
-    val decryptedSignedDataResult =
-      decryptResult(encryptedSignedResult, privateKeyHandle, ::fakeGetHybridCryptorForCipherSuite)
+    val decryptedSignedDataResult = decryptResult(encryptedSignedResult, MEASUREMENT_PRIVATE_KEY)
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
     assertThat(signedResult).isEqualTo(decryptedSignedDataResult)
@@ -234,33 +211,7 @@ class MeasurementConsumerClientTest {
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
 
-    @BeforeClass
-    @JvmStatic
-    fun initializePrivateKeyKeystore() {
-      runBlocking {
-        keyStore.storePrivateKeyDer(
-          MC_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(
-            readPrivateKey(MC_1_KEY_FILE, MC_SIGNING_KEY.certificate.publicKey.algorithm).encoded
-          )
-        )
-        keyStore.storePrivateKeyDer(
-          EDP_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(
-            readPrivateKey(EDP_1_KEY_FILE, EDP_SIGNING_KEY.certificate.publicKey.algorithm).encoded
-          )
-        )
-        keyStore.storePrivateKeyDer(
-          AGG_PRIVATE_KEY_HANDLE_KEY,
-          ByteString.copyFrom(
-            readPrivateKey(
-                DUCHY_AGG_KEY_FILE,
-                AGGREGATOR_SIGNING_KEY.certificate.publicKey.algorithm
-              )
-              .encoded
-          )
-        )
-      }
-    }
+    private val MEASUREMENT_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
+    private val MEASUREMENT_PUBLIC_KEY = MEASUREMENT_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
   }
 }
