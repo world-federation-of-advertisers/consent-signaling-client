@@ -22,8 +22,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
-import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
+import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.measurementSpec
@@ -204,12 +204,12 @@ class DuchyClientTest {
     val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
 
     assertThat(
-      org.wfanet.measurement.consent.client.dataprovider.verifyElGamalPublicKey(
-        elGamalPublicKeyData = signedElGamalPublicKey.data,
-        elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-        duchyCertificate = signingKeyHandle.certificate,
+        org.wfanet.measurement.consent.client.dataprovider.verifyElGamalPublicKey(
+          elGamalPublicKeyData = signedElGamalPublicKey.data,
+          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
+          duchyCertificate = signingKeyHandle.certificate,
+        )
       )
-    )
       .isTrue()
   }
 
