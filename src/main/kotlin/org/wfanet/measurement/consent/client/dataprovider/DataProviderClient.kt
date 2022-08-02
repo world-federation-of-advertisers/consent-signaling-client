@@ -16,7 +16,6 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -39,13 +38,12 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
  * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
  */
 fun verifyMeasurementSpec(
-  measurementSpecSignature: ByteString,
-  measurementSpec: MeasurementSpec,
+  signedMeasurementSpec: SignedData,
   measurementConsumerCertificate: X509Certificate
 ): Boolean {
   return measurementConsumerCertificate.verifySignature(
-    measurementSpec.toByteString(),
-    measurementSpecSignature
+    signedMeasurementSpec.data,
+    signedMeasurementSpec.signature
   )
 }
 
@@ -76,14 +74,14 @@ fun decryptRequisitionSpec(
  * 5. Compute the hash of the nonce and verify that the list in [measurementSpec] contains it
  */
 fun verifyRequisitionSpec(
-  requisitionSpecSignature: ByteString,
+  signedRequisitionSpec: SignedData,
   requisitionSpec: RequisitionSpec,
   measurementSpec: MeasurementSpec,
   measurementConsumerCertificate: X509Certificate
 ): Boolean {
   return measurementConsumerCertificate.verifySignature(
-    requisitionSpec.toByteString(),
-    requisitionSpecSignature
+    signedRequisitionSpec.data,
+    signedRequisitionSpec.signature
   ) &&
     requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey) &&
     measurementSpec.nonceHashesList.contains(hashSha256(requisitionSpec.nonce))
@@ -96,12 +94,9 @@ fun verifyRequisitionSpec(
  * 3. TODO: Verify certificate chain for [duchyCertificate]
  */
 fun verifyElGamalPublicKey(
+  elGamalPublicKeyData: ByteString,
   elGamalPublicKeySignature: ByteString,
-  elGamalPublicKey: ElGamalPublicKey,
   duchyCertificate: X509Certificate
 ): Boolean {
-  return duchyCertificate.verifySignature(
-    elGamalPublicKey.toByteString(),
-    elGamalPublicKeySignature
-  )
+  return duchyCertificate.verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)
 }
