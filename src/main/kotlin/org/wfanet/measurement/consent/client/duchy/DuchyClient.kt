@@ -107,12 +107,9 @@ fun signElgamalPublicKey(
  * 3. TODO: Verify certificate chain for [duchyCertificate]
  */
 fun verifyElGamalPublicKey(
+  elGamalPublicKeyData: ByteString,
   elGamalPublicKeySignature: ByteString,
-  elGamalPublicKey: ElGamalPublicKey,
   duchyCertificate: X509Certificate
 ): Boolean {
-  return duchyCertificate.verifySignature(
-    elGamalPublicKey.toByteString(),
-    elGamalPublicKeySignature
-  )
+  return duchyCertificate.verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)
 }

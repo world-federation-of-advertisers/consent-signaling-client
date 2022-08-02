@@ -22,6 +22,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
+import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.copy
@@ -32,8 +33,11 @@ import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.dataprovider.computeRequisitionFingerprint
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -46,6 +50,8 @@ private val NONCE_2_HASH =
   HexString("45FEAA185D434E0EB4747F547F0918AA5B8403DBBD7F90D6F0D8C536E2D620D7")
 
 private val MEASUREMENT_SPEC = measurementSpec { nonceHashes += NONCE_HASH.bytes }
+
+private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
 
 @RunWith(JUnit4::class)
 class DuchyClientTest {
@@ -192,8 +198,26 @@ class DuchyClientTest {
     assertThat(decryptedSignedResult).isEqualTo(signedMeasurementResult)
   }
 
+  @Test
+  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
+
+    assertThat(
+        org.wfanet.measurement.consent.client.dataprovider.verifyElGamalPublicKey(
+          elGamalPublicKeyData = signedElGamalPublicKey.data,
+          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
+          duchyCertificate = signingKeyHandle.certificate,
+        )
+      )
+      .isTrue()
+  }
+
   companion object {
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
+
+    private val DUCHY_SIGNING_KEY =
+      readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
   }
 }

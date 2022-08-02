@@ -47,9 +47,8 @@ class KingdomClientTest {
 
     assertTrue(
       verifyMeasurementSpec(
-        measurementSpecSignature = signedMeasurementSpec.signature,
-        measurementSpec = FAKE_MEASUREMENT_SPEC,
-        measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
+        signedMeasurementSpec = signedMeasurementSpec,
+        measurementConsumerCertificate = MC_SIGNING_KEY.certificate
       )
     )
   }

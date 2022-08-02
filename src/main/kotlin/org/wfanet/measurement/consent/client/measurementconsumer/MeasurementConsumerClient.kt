@@ -101,12 +101,8 @@ fun decryptResult(
  * 2. TODO: Check for replay attacks for [resultSignature]
  * 3. TODO: Verify certificate chain for [aggregatorCertificate]
  */
-fun verifyResult(
-  resultSignature: ByteString,
-  measurementResult: MeasurementResult,
-  aggregatorCertificate: X509Certificate
-): Boolean {
-  return aggregatorCertificate.verifySignature(measurementResult.toByteString(), resultSignature)
+fun verifyResult(signedResult: SignedData, aggregatorCertificate: X509Certificate): Boolean {
+  return aggregatorCertificate.verifySignature(signedResult.data, signedResult.signature)
 }
 
 /**
@@ -116,12 +112,11 @@ fun verifyResult(
  * 3. TODO: Verify certificate chain for [edpCertificate]
  */
 fun verifyEncryptionPublicKey(
-  encryptionPublicKeySignature: ByteString,
-  encryptionPublicKey: EncryptionPublicKey,
+  signedEncryptionPublicKey: SignedData,
   edpCertificate: X509Certificate
 ): Boolean {
   return edpCertificate.verifySignature(
-    encryptionPublicKey.toByteString(),
-    encryptionPublicKeySignature
+    signedEncryptionPublicKey.data,
+    signedEncryptionPublicKey.signature,
   )
 }

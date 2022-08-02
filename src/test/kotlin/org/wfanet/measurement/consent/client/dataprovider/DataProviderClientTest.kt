@@ -67,8 +67,7 @@ class DataProviderClientTest {
 
     assertThat(
         verifyMeasurementSpec(
-          measurementSpecSignature = signedMeasurementSpec.signature,
-          measurementSpec = FAKE_MEASUREMENT_SPEC,
+          signedMeasurementSpec = signedMeasurementSpec,
           measurementConsumerCertificate = signingKeyHandle.certificate,
         )
       )
@@ -94,7 +93,7 @@ class DataProviderClientTest {
     assertThat(signedRequisitionSpec).isEqualTo(decryptedSignedDataRequisitionSpec)
     assertThat(
         verifyRequisitionSpec(
-          requisitionSpecSignature = decryptedSignedDataRequisitionSpec.signature,
+          signedRequisitionSpec = signedRequisitionSpec,
           requisitionSpec = decryptedRequisitionSpec,
           measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
           measurementSpec = FAKE_MEASUREMENT_SPEC,
@@ -109,7 +108,7 @@ class DataProviderClientTest {
 
     assertThat(
         verifyRequisitionSpec(
-          requisitionSpecSignature = signedRequisitionSpec.signature,
+          signedRequisitionSpec = signedRequisitionSpec,
           requisitionSpec = FAKE_REQUISITION_SPEC,
           measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
           measurementSpec = FAKE_MEASUREMENT_SPEC,
@@ -125,8 +124,8 @@ class DataProviderClientTest {
 
     assertThat(
         verifyElGamalPublicKey(
+          elGamalPublicKeyData = signedElGamalPublicKey.data,
           elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-          elGamalPublicKey = FAKE_EL_GAMAL_PUBLIC_KEY,
           duchyCertificate = signingKeyHandle.certificate,
         )
       )
