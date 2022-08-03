@@ -6,6 +6,7 @@ kt_jvm_library(
     name = "kingdom",
     srcs = ["KingdomClient.kt"],
     deps = [
+        "//src/main/kotlin/org/wfanet/measurement/consent/client/common:veify_signed_data",
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_kt_jvm_proto",
         "//src/main/proto/wfa/measurement/api/v2alpha:measurement_spec_kt_jvm_proto",
         "@wfa_common_jvm//imports/java/com/google/protobuf",
