@@ -102,7 +102,7 @@ fun signElgamalPublicKey(
 
 /**
  * Verify the [elGamalPublicKeySignature] from another duchy.
- * 1. Verifies the [elGamalPublicKey] against the [elGamalPublicKeySignature]
+ * 1. Verifies the [elGamalPublicKeyData] against the [elGamalPublicKeySignature]
  * 2. TODO: Check for replay attacks for [elGamalPublicKeySignature]
  * 3. TODO: Verify certificate chain for [duchyCertificate]
  */

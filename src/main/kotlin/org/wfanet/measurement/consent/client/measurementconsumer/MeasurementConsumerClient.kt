@@ -27,6 +27,7 @@ import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
+import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /** Create a SHA256 hash of the serialized [dataProviderList] using the [dataProviderListSalt]. */
 fun createDataProviderListHash(
@@ -97,8 +98,8 @@ fun decryptResult(
 
 /**
  * Verify the Result from the Aggregator
- * 1. Verifies the [measurementResult] against the [resultSignature]
- * 2. TODO: Check for replay attacks for [resultSignature]
+ * 1. Verifies the [signedResult.data] against the [signedResult.signature]
+ * 2. TODO: Check for replay attacks for [signedResult.signature]
  * 3. TODO: Verify certificate chain for [aggregatorCertificate]
  */
 fun verifyResult(signedResult: SignedData, aggregatorCertificate: X509Certificate): Boolean {
@@ -107,7 +108,8 @@ fun verifyResult(signedResult: SignedData, aggregatorCertificate: X509Certificat
 
 /**
  * Verify the EncryptionPublicKey from the Endpoint Data Provider
- * 1. Verifies the [encryptionPublicKey] against the [encryptionPublicKeySignature]
+ * 1. Verifies the [signedEncryptionPublicKey.data] against the
+ * [signedEncryptionPublicKey.signature]
  * 2. TODO: Check for replay attacks for [encryptionPublicKeySignature]
  * 3. TODO: Verify certificate chain for [edpCertificate]
  */
@@ -115,8 +117,5 @@ fun verifyEncryptionPublicKey(
   signedEncryptionPublicKey: SignedData,
   edpCertificate: X509Certificate
 ): Boolean {
-  return edpCertificate.verifySignature(
-    signedEncryptionPublicKey.data,
-    signedEncryptionPublicKey.signature,
-  )
+  return edpCertificate.verifySignedData(signedEncryptionPublicKey)
 }
