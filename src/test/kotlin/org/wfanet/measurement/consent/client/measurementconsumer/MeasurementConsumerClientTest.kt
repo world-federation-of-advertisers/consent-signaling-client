@@ -165,8 +165,7 @@ class MeasurementConsumerClientTest {
     assertThat(signedResult).isEqualTo(decryptedSignedDataResult)
     assertThat(
         verifyResult(
-          resultSignature = decryptedSignedDataResult.signature,
-          measurementResult = decryptedResult,
+          signedResult = signedResult,
           aggregatorCertificate = AGGREGATOR_SIGNING_KEY.certificate,
         )
       )
@@ -181,8 +180,7 @@ class MeasurementConsumerClientTest {
 
     assertThat(
         verifyResult(
-          resultSignature = signedResult.signature,
-          measurementResult = FAKE_MEASUREMENT_RESULT,
+          signedResult = signedResult,
           aggregatorCertificate = signingKeyHandle.certificate,
         )
       )
@@ -197,8 +195,7 @@ class MeasurementConsumerClientTest {
 
     assertThat(
         verifyEncryptionPublicKey(
-          encryptionPublicKeySignature = signedEncryptionPublicKey.signature,
-          encryptionPublicKey = FAKE_ENCRYPTION_PUBLIC_KEY,
+          signedEncryptionPublicKey = signedEncryptionPublicKey,
           edpCertificate = signingKeyHandle.certificate,
         )
       )

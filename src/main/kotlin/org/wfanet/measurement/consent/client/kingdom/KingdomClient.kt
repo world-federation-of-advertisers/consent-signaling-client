@@ -14,24 +14,19 @@
 
 package org.wfanet.measurement.consent.client.kingdom
 
-import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import org.wfanet.measurement.api.v2alpha.MeasurementSpec
-import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /**
  * Verify the MeasurementSpec from the MeasurementConsumer
- * 1. Verifies the [measurementSpec] against the [measurementSpecSignature]
- * 2. TODO: Check for replay attacks for [measurementSpecSignature]
+ * 1. Verifies the [signedMeasurementSpec.data] against the [signedMeasurementSpec.signature]
+ * 2. TODO: Check for replay attacks for [signedMeasurementSpec.signature]
  * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
  */
 fun verifyMeasurementSpec(
-  measurementSpecSignature: ByteString,
-  measurementSpec: MeasurementSpec,
+  signedMeasurementSpec: SignedData,
   measurementConsumerCertificate: X509Certificate
 ): Boolean {
-  return measurementConsumerCertificate.verifySignature(
-    measurementSpec.toByteString(),
-    measurementSpecSignature
-  )
+  return measurementConsumerCertificate.verifySignedData(signedMeasurementSpec)
 }

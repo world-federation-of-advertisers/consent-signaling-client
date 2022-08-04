@@ -16,7 +16,6 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
-import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -24,6 +23,7 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /** Computes the "requisition fingerprint" for [requisition]. */
 fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
@@ -34,19 +34,15 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
 
 /**
  * Verify the MeasurementSpec from the MeasurementConsumer
- * 1. Verifies the [measurementSpec] against the [measurementSpecSignature]
- * 2. TODO: Check for replay attacks for [measurementSpecSignature]
+ * 1. Verifies the [signedMeasurementSpec.data] against the [signedMeasurementSpec.signature]
+ * 2. TODO: Check for replay attacks for [signedMeasurementSpec.signature]
  * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
  */
 fun verifyMeasurementSpec(
-  measurementSpecSignature: ByteString,
-  measurementSpec: MeasurementSpec,
+  signedMeasurementSpec: SignedData,
   measurementConsumerCertificate: X509Certificate
 ): Boolean {
-  return measurementConsumerCertificate.verifySignature(
-    measurementSpec.toByteString(),
-    measurementSpecSignature
-  )
+  return measurementConsumerCertificate.verifySignedData(signedMeasurementSpec)
 }
 
 /**
@@ -71,37 +67,31 @@ fun decryptRequisitionSpec(
  * The steps are:
  * 1. TODO: Check for replay attacks
  * 2. TODO: Verify certificate chain for [measurementConsumerCertificate]
- * 3. Verify the [requisitionSpecSignature]
+ * 3. Verify the [signedRequisitionSpec.signature]
  * 4. Compare the measurement encryption key to the one in [measurementSpec]
  * 5. Compute the hash of the nonce and verify that the list in [measurementSpec] contains it
  */
 fun verifyRequisitionSpec(
-  requisitionSpecSignature: ByteString,
+  signedRequisitionSpec: SignedData,
   requisitionSpec: RequisitionSpec,
   measurementSpec: MeasurementSpec,
   measurementConsumerCertificate: X509Certificate
 ): Boolean {
-  return measurementConsumerCertificate.verifySignature(
-    requisitionSpec.toByteString(),
-    requisitionSpecSignature
-  ) &&
+  return measurementConsumerCertificate.verifySignedData(signedRequisitionSpec) &&
     requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey) &&
     measurementSpec.nonceHashesList.contains(hashSha256(requisitionSpec.nonce))
 }
 
 /**
  * Verify the [elGamalPublicKeySignature] from another duchy.
- * 1. Verifies the [elGamalPublicKey] against the [elGamalPublicKeySignature]
+ * 1. Verifies the [elGamalPublicKeyData] against the [elGamalPublicKeySignature]
  * 2. TODO: Check for replay attacks for [elGamalPublicKeySignature]
  * 3. TODO: Verify certificate chain for [duchyCertificate]
  */
 fun verifyElGamalPublicKey(
+  elGamalPublicKeyData: ByteString,
   elGamalPublicKeySignature: ByteString,
-  elGamalPublicKey: ElGamalPublicKey,
   duchyCertificate: X509Certificate
 ): Boolean {
-  return duchyCertificate.verifySignature(
-    elGamalPublicKey.toByteString(),
-    elGamalPublicKeySignature
-  )
+  return duchyCertificate.verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)
 }
