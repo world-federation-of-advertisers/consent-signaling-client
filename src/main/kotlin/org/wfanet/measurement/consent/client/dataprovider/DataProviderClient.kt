@@ -16,13 +16,17 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
+import org.wfanet.measurement.api.v2alpha.Measurement.Result
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
+import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /** Computes the "requisition fingerprint" for [requisition]. */
@@ -94,4 +98,22 @@ fun verifyElGamalPublicKey(
   duchyCertificate: X509Certificate
 ): Boolean {
   return duchyCertificate.verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)
+}
+
+/**
+ * Signs [Result] into [SignedData]
+ *
+ * The [dataProviderSigningKey] determines the algorithm type of the signature.
+ */
+fun signResult(result: Result, dataProviderSigningKey: SigningKeyHandle): SignedData {
+  return signMessage(result, dataProviderSigningKey)
+}
+
+/**
+ * Signs [Metadata] into [SignedData]
+ *
+ * The [dataProviderSigningKey] determines the algorithm type of the signature.
+ */
+fun signMetadata(metadata: Metadata, dataProviderSigningKey: SigningKeyHandle): SignedData {
+  return signMessage(metadata, dataProviderSigningKey)
 }
