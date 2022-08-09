@@ -22,6 +22,9 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.EventGroupKt.metadata
+import org.wfanet.measurement.api.v2alpha.MeasurementKt.ResultKt.reach
+import org.wfanet.measurement.api.v2alpha.MeasurementKt.result
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.measurementSpec
@@ -30,10 +33,14 @@ import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
+import org.wfanet.measurement.consent.client.measurementconsumer.decryptMetadata
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
 import org.wfanet.measurement.consent.client.measurementconsumer.signRequisitionSpec
+import org.wfanet.measurement.consent.client.measurementconsumer.verifyResult
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -57,6 +64,12 @@ private val FAKE_REQUISITION_SPEC = requisitionSpec {
 }
 
 private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
+
+private val FAKE_MEASUREMENT_RESULT = result { reach = reach { value = 100 } }
+
+private val FAKE_EVENT_GROUP_METADATA = metadata {
+  eventGroupMetadataDescriptor = "fake descriptor"
+}
 
 @RunWith(JUnit4::class)
 class DataProviderClientTest {
@@ -132,11 +145,38 @@ class DataProviderClientTest {
       .isTrue()
   }
 
+  @Test
+  fun `signResult returns valid signature`() = runBlocking {
+    val signedResult =
+      signResult(
+        result = FAKE_MEASUREMENT_RESULT,
+        dataProviderSigningKey = EDP_SIGNING_KEY,
+      )
+
+    assertThat(verifyResult(signedResult, EDP_SIGNING_KEY.certificate)).isTrue()
+  }
+
+  @Test
+  fun `encryptMetadata returns encrypted Metadata`() = runBlocking {
+    val encryptedMetadata =
+      encryptMetadata(
+        metadata = FAKE_EVENT_GROUP_METADATA,
+        measurementConsumerPublicKey = MC_PUBLIC_KEY
+      )
+
+    val metadata = decryptMetadata(encryptedMetadata, MC_PRIVATE_KEY)
+    assertThat(metadata).isEqualTo(FAKE_EVENT_GROUP_METADATA)
+  }
+
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
+    private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
+    private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
+
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
 
+    private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
     private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val EDP_PUBLIC_KEY = EDP_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
   }

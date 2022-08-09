@@ -17,6 +17,7 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -119,3 +120,9 @@ fun verifyEncryptionPublicKey(
 ): Boolean {
   return edpCertificate.verifySignedData(signedEncryptionPublicKey)
 }
+
+/** Decrypts an encrypted [Metadata]. */
+fun decryptMetadata(
+  encryptedMetadata: ByteString,
+  measurementConsumerPrivateKey: PrivateKeyHandle
+): Metadata = Metadata.parseFrom(measurementConsumerPrivateKey.hybridDecrypt(encryptedMetadata))
