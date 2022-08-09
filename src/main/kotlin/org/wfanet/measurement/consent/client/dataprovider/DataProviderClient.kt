@@ -16,6 +16,7 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
 import org.wfanet.measurement.api.v2alpha.Measurement.Result
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
@@ -27,6 +28,7 @@ import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /** Computes the "requisition fingerprint" for [requisition]. */
@@ -109,11 +111,9 @@ fun signResult(result: Result, dataProviderSigningKey: SigningKeyHandle): Signed
   return signMessage(result, dataProviderSigningKey)
 }
 
-/**
- * Signs [Metadata] into [SignedData]
- *
- * The [dataProviderSigningKey] determines the algorithm type of the signature.
- */
-fun signMetadata(metadata: Metadata, dataProviderSigningKey: SigningKeyHandle): SignedData {
-  return signMessage(metadata, dataProviderSigningKey)
-}
+/** Encrypts a [Metadata]. */
+fun encryptMetadata(
+  metadata: Metadata,
+  measurementConsumerPublicKey: EncryptionPublicKey
+): ByteString =
+  measurementConsumerPublicKey.toPublicKeyHandle().hybridEncrypt(metadata.toByteString())

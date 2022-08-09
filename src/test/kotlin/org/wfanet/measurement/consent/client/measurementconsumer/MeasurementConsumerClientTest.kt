@@ -21,6 +21,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.EventGroupKt
 import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
@@ -30,6 +31,7 @@ import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
+import org.wfanet.measurement.consent.client.dataprovider.encryptMetadata
 import org.wfanet.measurement.consent.client.duchy.encryptResult
 import org.wfanet.measurement.consent.client.duchy.signResult
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
@@ -55,6 +57,9 @@ private val FAKE_MEASUREMENT_RESULT =
           .build()
     }
     .build()
+
+private val FAKE_EVENT_GROUP_METADATA =
+  EventGroupKt.metadata { eventGroupMetadataDescriptor = "fake descriptor" }
 
 private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
 
@@ -202,9 +207,26 @@ class MeasurementConsumerClientTest {
       .isTrue()
   }
 
+  @Test
+  fun `decryptMetadata returns decrypted Metadata`() = runBlocking {
+    val encryptedMetadata = encryptMetadata(FAKE_EVENT_GROUP_METADATA, MC_PUBLIC_KEY)
+
+    val metadata =
+      decryptMetadata(
+        encryptedMetadata = encryptedMetadata,
+        measurementConsumerPrivateKey = MC_PRIVATE_KEY
+      )
+
+    assertThat(metadata).isEqualTo(FAKE_EVENT_GROUP_METADATA)
+  }
+
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
+    private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
+    private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
+
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
 
