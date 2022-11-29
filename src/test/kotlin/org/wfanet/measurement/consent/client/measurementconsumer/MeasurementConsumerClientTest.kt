@@ -27,6 +27,7 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
@@ -36,6 +37,7 @@ import org.wfanet.measurement.consent.client.duchy.encryptResult
 import org.wfanet.measurement.consent.client.duchy.signResult
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
@@ -168,28 +170,15 @@ class MeasurementConsumerClientTest {
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
     assertThat(signedResult).isEqualTo(decryptedSignedDataResult)
-    assertThat(
-        verifyResult(
-          signedResult = signedResult,
-          aggregatorCertificate = AGGREGATOR_SIGNING_KEY.certificate,
-        )
-      )
-      .isTrue()
     assertThat(FAKE_MEASUREMENT_RESULT.reach.value).isEqualTo(decryptedResult.reach.value)
   }
 
   @Test
-  fun `verifyResult verifies valid MeasurementResult signature`() = runBlocking {
+  fun `verifyResult does not throw exception when signature is valid`() = runBlocking {
     val signingKeyHandle = AGGREGATOR_SIGNING_KEY
     val signedResult: SignedData = signMessage(FAKE_MEASUREMENT_RESULT, signingKeyHandle)
 
-    assertThat(
-        verifyResult(
-          signedResult = signedResult,
-          aggregatorCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, AGGREGATOR_ROOT_CERT)
   }
 
   @Test
@@ -229,6 +218,7 @@ class MeasurementConsumerClientTest {
 
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
+    private val AGGREGATOR_ROOT_CERT = readCertificate(DUCHY_AGG_ROOT_CERT_PEM_FILE)
 
     private val MEASUREMENT_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MEASUREMENT_PUBLIC_KEY = MEASUREMENT_PRIVATE_KEY.publicKey.toEncryptionPublicKey()

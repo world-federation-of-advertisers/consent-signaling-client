@@ -31,6 +31,7 @@ import org.wfanet.measurement.api.v2alpha.requisition
 import org.wfanet.measurement.api.v2alpha.signedData
 import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
@@ -38,6 +39,7 @@ import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.dataprovider.computeRequisitionFingerprint
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -199,18 +201,16 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+  fun `verifiesElgamalPublicKey does not throw exception when signature is valid`() = runBlocking {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
 
-    assertThat(
-        org.wfanet.measurement.consent.client.dataprovider.verifyElGamalPublicKey(
-          elGamalPublicKeyData = signedElGamalPublicKey.data,
-          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-          duchyCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyElGamalPublicKey(
+      signedElGamalPublicKey.data,
+      signedElGamalPublicKey.signature,
+      signingKeyHandle.certificate,
+      DUCHY_TRUSTED_ISSUER
+    )
   }
 
   companion object {
@@ -219,5 +219,6 @@ class DuchyClientTest {
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
   }
 }

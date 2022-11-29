@@ -30,6 +30,7 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisitionSpec
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
@@ -39,8 +40,10 @@ import org.wfanet.measurement.consent.client.measurementconsumer.signRequisition
 import org.wfanet.measurement.consent.client.measurementconsumer.verifyResult
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -131,18 +134,16 @@ class DataProviderClientTest {
   }
 
   @Test
-  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+  fun `verifiesElgamalPublicKey does not throw exception when signature is valid`() = runBlocking {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
 
-    assertThat(
-        verifyElGamalPublicKey(
-          elGamalPublicKeyData = signedElGamalPublicKey.data,
-          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-          duchyCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyElGamalPublicKey(
+      signedElGamalPublicKey.data,
+      signedElGamalPublicKey.signature,
+      signingKeyHandle.certificate,
+      DUCHY_TRUSTED_ISSUER
+    )
   }
 
   @Test
@@ -153,7 +154,7 @@ class DataProviderClientTest {
         dataProviderSigningKey = EDP_SIGNING_KEY,
       )
 
-    assertThat(verifyResult(signedResult, EDP_SIGNING_KEY.certificate)).isTrue()
+    verifyResult(signedResult, EDP_SIGNING_KEY.certificate, EDP_TRUSTED_ISSUER)
   }
 
   @Test
@@ -175,8 +176,10 @@ class DataProviderClientTest {
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
     private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val EDP_PUBLIC_KEY = EDP_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
   }

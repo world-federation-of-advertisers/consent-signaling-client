@@ -15,6 +15,8 @@
 package org.wfanet.measurement.consent.client.measurementconsumer
 
 import com.google.protobuf.ByteString
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
@@ -25,6 +27,7 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
@@ -98,13 +101,26 @@ fun decryptResult(
 }
 
 /**
- * Verify the Result from the Aggregator
- * 1. Verifies the [signedResult.data] against the [signedResult.signature]
- * 2. TODO: Check for replay attacks for [signedResult.signature]
- * 3. TODO: Verify certificate chain for [aggregatorCertificate]
+ * Verifies a [MeasurementResult] from a DataProvider or the Aggregator
+ *
+ * 1. Validates [certificate] against [trustedIssuer]
+ * 2. Verifies the [signedResult] data against the [signedResult] signature
+ * 3. TODO: Check for replay attacks for the [signedResult] signature
+ *
+ * @throws CertPathValidatorException if [certificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
-fun verifyResult(signedResult: SignedData, aggregatorCertificate: X509Certificate): Boolean {
-  return aggregatorCertificate.verifySignature(signedResult.data, signedResult.signature)
+fun verifyResult(
+  signedResult: SignedData,
+  certificate: X509Certificate,
+  trustedIssuer: X509Certificate
+) {
+  certificate.run {
+    validate(trustedIssuer)
+    if (!verifySignature(signedResult.data, signedResult.signature)) {
+      throw SignatureException("Signature is invalid")
+    }
+  }
 }
 
 /**

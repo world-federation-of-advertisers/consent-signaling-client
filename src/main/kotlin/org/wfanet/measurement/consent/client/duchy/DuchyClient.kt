@@ -15,6 +15,8 @@
 package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
@@ -23,6 +25,7 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.signMessage
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
@@ -101,15 +104,25 @@ fun signElgamalPublicKey(
 }
 
 /**
- * Verify the [elGamalPublicKeySignature] from another duchy.
- * 1. Verifies the [elGamalPublicKeyData] against the [elGamalPublicKeySignature]
- * 2. TODO: Check for replay attacks for [elGamalPublicKeySignature]
- * 3. TODO: Verify certificate chain for [duchyCertificate]
+ * Verifies the [elGamalPublicKeySignature] from a Duchy.
+ *
+ * 1. Validates [duchyCertificate] against [trustedDuchyIssuer]
+ * 2. Verifies the [elGamalPublicKeyData] against the [elGamalPublicKeySignature]
+ * 3. TODO: Check for replay attacks for [elGamalPublicKeySignature]
+ *
+ * @throws CertPathValidatorException if [duchyCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
 fun verifyElGamalPublicKey(
   elGamalPublicKeyData: ByteString,
   elGamalPublicKeySignature: ByteString,
-  duchyCertificate: X509Certificate
-): Boolean {
-  return duchyCertificate.verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)
+  duchyCertificate: X509Certificate,
+  trustedDuchyIssuer: X509Certificate
+) {
+  return duchyCertificate.run {
+    validate(trustedDuchyIssuer)
+    if (!verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)) {
+      throw SignatureException("Signature is invalid")
+    }
+  }
 }
