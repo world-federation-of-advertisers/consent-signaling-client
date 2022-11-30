@@ -14,19 +14,32 @@
 
 package org.wfanet.measurement.consent.client.kingdom
 
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /**
- * Verify the MeasurementSpec from the MeasurementConsumer
- * 1. Verifies the [signedMeasurementSpec.data] against the [signedMeasurementSpec.signature]
- * 2. TODO: Check for replay attacks for [signedMeasurementSpec.signature]
- * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
+ * Verify the MeasurementSpec from the MeasurementConsumer.
+ *
+ * 1. Validates the certificate path from [measurementConsumerCertificate] to [trustedIssuer]
+ * 2. Verifies the [signature][SignedData.getSignature] of [signedMeasurementSpec] against its
+ * [data][SignedData.getData]
+ * 3. TODO: Check for replay attacks for [signedMeasurementSpec]'s signature
+ *
+ * @throws CertPathValidatorException if [measurementConsumerCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
+@Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyMeasurementSpec(
   signedMeasurementSpec: SignedData,
-  measurementConsumerCertificate: X509Certificate
-): Boolean {
-  return measurementConsumerCertificate.verifySignedData(signedMeasurementSpec)
+  measurementConsumerCertificate: X509Certificate,
+  trustedIssuer: X509Certificate
+) {
+  measurementConsumerCertificate.run {
+    validate(trustedIssuer)
+    verifySignedData(signedMeasurementSpec)
+  }
 }

@@ -47,12 +47,16 @@ fun readSigningKeyHandle(certificatePem: File, privateKeyPem: File): SigningKeyH
 
 val EDP_1_CERT_PEM_FILE = loadTestFile("edp_1.pem")
 val EDP_1_KEY_FILE = loadTestFile("edp_1.key")
+val EDP_1_ROOT_CERT_PEM_FILE = loadTestFile("edp_1_root.pem")
 
 val MC_1_CERT_PEM_FILE = loadTestFile("mc_1.pem")
 val MC_1_KEY_FILE = loadTestFile("mc_1.key")
+val MC_1_ROOT_CERT_PEM_FILE = loadTestFile("mc_1_root.pem")
 
 val DUCHY_1_NON_AGG_CERT_PEM_FILE = loadTestFile("non_aggregator_1.pem")
 val DUCHY_1_NON_AGG_KEY_FILE = loadTestFile("non_aggregator_1.key")
+val DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE = loadTestFile("non_aggregator_1_root.pem")
 
 val DUCHY_AGG_CERT_PEM_FILE = loadTestFile("aggregator.pem")
 val DUCHY_AGG_KEY_FILE = loadTestFile("aggregator.key")
+val DUCHY_AGG_ROOT_CERT_PEM_FILE = loadTestFile("aggregator_root.pem")

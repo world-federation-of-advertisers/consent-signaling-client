@@ -15,7 +15,6 @@
 package org.wfanet.measurement.consent.client.kingdom
 
 import com.google.protobuf.ByteString
-import kotlin.test.assertTrue
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -23,9 +22,11 @@ import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.consent.client.measurementconsumer.signMeasurementSpec
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.MC_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
 
 private val MEASUREMENT_PUBLIC_KEY =
@@ -41,19 +42,15 @@ private val FAKE_MEASUREMENT_SPEC =
 @RunWith(JUnit4::class)
 class KingdomClientTest {
   @Test
-  fun `verifyMeasurementSpec verifies valid MeasurementSpec signature`() = runBlocking {
+  fun `verifyMeasurementSpec does not throw when signed MeasurementSpec is valid`() = runBlocking {
     val signedMeasurementSpec: SignedData =
       signMeasurementSpec(FAKE_MEASUREMENT_SPEC, MC_SIGNING_KEY)
 
-    assertTrue(
-      verifyMeasurementSpec(
-        signedMeasurementSpec = signedMeasurementSpec,
-        measurementConsumerCertificate = MC_SIGNING_KEY.certificate
-      )
-    )
+    verifyMeasurementSpec(signedMeasurementSpec, MC_SIGNING_KEY.certificate, MC_TRUSTED_ISSUER)
   }
 
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
+    private val MC_TRUSTED_ISSUER = readCertificate(MC_1_ROOT_CERT_PEM_FILE)
   }
 }

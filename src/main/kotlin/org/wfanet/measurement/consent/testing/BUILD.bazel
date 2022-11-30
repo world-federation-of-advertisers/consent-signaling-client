@@ -19,7 +19,7 @@ generate_root_certificate(
 generate_user_certificate(
     name = "mc_1",
     common_name = "Some MC 1",
-    hostname = "some-mc-1.example.com",
+    hostnames = ["some-mc-1.example.com"],
     org = "Some MC 1",
     root_certificate = ":mc_1_root.pem",
     root_key = ":mc_1_root.key",
@@ -35,7 +35,7 @@ generate_root_certificate(
 generate_user_certificate(
     name = "edp_1",
     common_name = "Some EDP 1",
-    hostname = "some-edp-1.example.com",
+    hostnames = ["some-edp-1.example.com"],
     org = "Some EDP 1",
     root_certificate = ":edp_1_root.pem",
     root_key = ":edp_1_root.key",
@@ -51,7 +51,7 @@ generate_root_certificate(
 generate_user_certificate(
     name = "aggregator",
     common_name = "The aggregator",
-    hostname = "duchy-aggregator.example.com",
+    hostnames = ["duchy-aggregator.example.com"],
     org = "The Aggregator",
     root_certificate = ":aggregator_root.pem",
     root_key = ":aggregator_root.key",
@@ -67,7 +67,7 @@ generate_root_certificate(
 generate_user_certificate(
     name = "non_aggregator_1",
     common_name = "A Duchy 1",
-    hostname = "some-duchy-1.example.com",
+    hostnames = ["some-duchy-1.example.com"],
     org = "A Duchy 1",
     root_certificate = ":non_aggregator_1_root.pem",
     root_key = ":non_aggregator_1_root.key",
@@ -83,7 +83,7 @@ generate_root_certificate(
 generate_user_certificate(
     name = "non_aggregator_2",
     common_name = "A Duchy 2",
-    hostname = "some-duchy-2.example.com",
+    hostnames = ["some-duchy-2.example.com"],
     org = "A Duchy 2",
     root_certificate = ":non_aggregator_2_root.pem",
     root_key = ":non_aggregator_2_root.key",
@@ -92,16 +92,18 @@ generate_user_certificate(
 filegroup(
     name = "mc_certs",
     srcs = [
-        "mc_1.key",
-        "mc_1.pem",
+        ":mc_1.key",
+        ":mc_1.pem",
+        ":mc_1_root.pem",
     ],
 )
 
 filegroup(
     name = "edp_certs",
     srcs = [
-        "edp_1.key",
-        "edp_1.pem",
+        ":edp_1.key",
+        ":edp_1.pem",
+        ":edp_1_root.pem",
     ],
 )
 
@@ -110,8 +112,10 @@ filegroup(
     srcs = [
         ":aggregator.key",
         ":aggregator.pem",
+        ":aggregator_root.pem",
         ":non_aggregator_1.key",
         ":non_aggregator_1.pem",
+        ":non_aggregator_1_root.pem",
     ],
 )
 
@@ -127,6 +131,7 @@ kt_jvm_library(
     deps = [
         "@wfa_common_jvm//imports/java/org/junit",
         "@wfa_common_jvm//imports/kotlin/kotlin/test",
+        "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:pem_io",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:security_provider",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:signatures",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto/testing",

@@ -30,8 +30,9 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisitionSpec
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
-import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.measurementconsumer.decryptMetadata
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
@@ -39,10 +40,13 @@ import org.wfanet.measurement.consent.client.measurementconsumer.signRequisition
 import org.wfanet.measurement.consent.client.measurementconsumer.verifyResult
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.MC_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
 
 private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
@@ -74,17 +78,11 @@ private val FAKE_EVENT_GROUP_METADATA = metadata {
 @RunWith(JUnit4::class)
 class DataProviderClientTest {
   @Test
-  fun `verifyMeasurementSpec verifies valid MeasurementSpec signature`() = runBlocking {
+  fun `verifyMeasurementSpec does not throw when signed MeasurementSpec is valid`() = runBlocking {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData = signMessage(FAKE_MEASUREMENT_SPEC, signingKeyHandle)
+    val signedMeasurementSpec: SignedData = FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        verifyMeasurementSpec(
-          signedMeasurementSpec = signedMeasurementSpec,
-          measurementConsumerCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyMeasurementSpec(signedMeasurementSpec, signingKeyHandle.certificate, MC_TRUSTED_ISSUER)
   }
 
   @Test
@@ -104,45 +102,39 @@ class DataProviderClientTest {
       RequisitionSpec.parseFrom(decryptedSignedDataRequisitionSpec.data)
 
     assertThat(signedRequisitionSpec).isEqualTo(decryptedSignedDataRequisitionSpec)
-    assertThat(
-        verifyRequisitionSpec(
-          signedRequisitionSpec = signedRequisitionSpec,
-          requisitionSpec = decryptedRequisitionSpec,
-          measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
-          measurementSpec = FAKE_MEASUREMENT_SPEC,
-        )
-      )
-      .isTrue()
+    verifyRequisitionSpec(
+      signedRequisitionSpec,
+      decryptedRequisitionSpec,
+      FAKE_MEASUREMENT_SPEC,
+      MC_SIGNING_KEY.certificate,
+      MC_TRUSTED_ISSUER
+    )
   }
 
   @Test
-  fun `verifyRequistionSpec verifies valid RequistionSpec signature`() = runBlocking {
+  fun `verifyRequisitionSpec does not throw when signed RequisitionSpec is valid`() = runBlocking {
     val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
 
-    assertThat(
-        verifyRequisitionSpec(
-          signedRequisitionSpec = signedRequisitionSpec,
-          requisitionSpec = FAKE_REQUISITION_SPEC,
-          measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
-          measurementSpec = FAKE_MEASUREMENT_SPEC,
-        )
-      )
-      .isTrue()
+    verifyRequisitionSpec(
+      signedRequisitionSpec,
+      FAKE_REQUISITION_SPEC,
+      FAKE_MEASUREMENT_SPEC,
+      MC_SIGNING_KEY.certificate,
+      MC_TRUSTED_ISSUER
+    )
   }
 
   @Test
-  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+  fun `verifiesElgamalPublicKey does not throw exception when signature is valid`() = runBlocking {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        verifyElGamalPublicKey(
-          elGamalPublicKeyData = signedElGamalPublicKey.data,
-          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-          duchyCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyElGamalPublicKey(
+      signedElGamalPublicKey,
+      signingKeyHandle.certificate,
+      DUCHY_TRUSTED_ISSUER
+    )
   }
 
   @Test
@@ -153,7 +145,7 @@ class DataProviderClientTest {
         dataProviderSigningKey = EDP_SIGNING_KEY,
       )
 
-    assertThat(verifyResult(signedResult, EDP_SIGNING_KEY.certificate)).isTrue()
+    verifyResult(signedResult, EDP_SIGNING_KEY.certificate, EDP_TRUSTED_ISSUER)
   }
 
   @Test
@@ -172,11 +164,14 @@ class DataProviderClientTest {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
     private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
+    private val MC_TRUSTED_ISSUER = readCertificate(MC_1_ROOT_CERT_PEM_FILE)
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
     private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val EDP_PUBLIC_KEY = EDP_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
   }

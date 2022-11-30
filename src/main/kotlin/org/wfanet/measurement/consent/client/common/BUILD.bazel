@@ -27,11 +27,17 @@ kt_jvm_library(
 )
 
 kt_jvm_library(
-    name = "veify_signed_data",
+    name = "verify_signed_data",
     srcs = ["VerifySignedData.kt"],
     deps = [
         "//src/main/proto/wfa/measurement/api/v2alpha:crypto_kt_jvm_proto",
         "@wfa_common_jvm//imports/java/com/google/protobuf",
         "@wfa_common_jvm//src/main/kotlin/org/wfanet/measurement/common/crypto:signatures",
     ],
+)
+
+kt_jvm_library(
+    name = "verification_exception",
+    srcs = ["VerificationException.kt"],
+    visibility = ["//visibility:public"],
 )

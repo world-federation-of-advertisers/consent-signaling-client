@@ -15,6 +15,8 @@
 package org.wfanet.measurement.consent.client.measurementconsumer
 
 import com.google.protobuf.ByteString
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
@@ -25,8 +27,9 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
-import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 import org.wfanet.measurement.consent.client.common.verifySignedData
 
@@ -47,7 +50,7 @@ fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
   measurementConsumerSigningKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(requisitionSpec, measurementConsumerSigningKey)
+  return requisitionSpec.serializeAndSign(measurementConsumerSigningKey)
 }
 
 /**
@@ -73,7 +76,7 @@ fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
   measurementConsumerSigningKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(measurementSpec, measurementConsumerSigningKey)
+  return measurementSpec.serializeAndSign(measurementConsumerSigningKey)
 }
 
 /** Signs the measurementConsumer's encryptionPublicKey. */
@@ -81,7 +84,7 @@ fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   signingKey: SigningKeyHandle
 ): SignedData {
-  return signMessage(encryptionPublicKey, signingKey)
+  return encryptionPublicKey.serializeAndSign(signingKey)
 }
 
 /**
@@ -98,27 +101,49 @@ fun decryptResult(
 }
 
 /**
- * Verify the Result from the Aggregator
- * 1. Verifies the [signedResult.data] against the [signedResult.signature]
- * 2. TODO: Check for replay attacks for [signedResult.signature]
- * 3. TODO: Verify certificate chain for [aggregatorCertificate]
+ * Verifies a [MeasurementResult] from a DataProvider or the Aggregator
+ *
+ * 1. Validates [certificate] against [trustedIssuer]
+ * 2. Verifies the [signedResult] data against the [signedResult] signature
+ * 3. TODO: Check for replay attacks for the [signedResult] signature
+ *
+ * @throws CertPathValidatorException if [certificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
-fun verifyResult(signedResult: SignedData, aggregatorCertificate: X509Certificate): Boolean {
-  return aggregatorCertificate.verifySignature(signedResult.data, signedResult.signature)
+fun verifyResult(
+  signedResult: SignedData,
+  certificate: X509Certificate,
+  trustedIssuer: X509Certificate
+) {
+  certificate.run {
+    validate(trustedIssuer)
+    if (!verifySignature(signedResult.data, signedResult.signature)) {
+      throw SignatureException("Signature is invalid")
+    }
+  }
 }
 
 /**
- * Verify the EncryptionPublicKey from the Endpoint Data Provider
- * 1. Verifies the [signedEncryptionPublicKey.data] against the
- * [signedEncryptionPublicKey.signature]
- * 2. TODO: Check for replay attacks for [encryptionPublicKeySignature]
- * 3. TODO: Verify certificate chain for [edpCertificate]
+ * Verifies the EncryptionPublicKey from the DataProvider
+ *
+ * 1. Validates the certificate path from [dataProviderCertificate] to [trustedIssuer]
+ * 2. Verifies the [signature][SignedData.getSignature] of [signedEncryptionPublicKey] against its
+ * [data][SignedData.getData]
+ * 3. TODO: Check for replay attacks for [dataProviderCertificate]'s signature
+ *
+ * @throws CertPathValidatorException if [dataProviderCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
+@Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyEncryptionPublicKey(
   signedEncryptionPublicKey: SignedData,
-  edpCertificate: X509Certificate
-): Boolean {
-  return edpCertificate.verifySignedData(signedEncryptionPublicKey)
+  dataProviderCertificate: X509Certificate,
+  trustedIssuer: X509Certificate
+) {
+  dataProviderCertificate.run {
+    validate(trustedIssuer)
+    verifySignedData(signedEncryptionPublicKey)
+  }
 }
 
 /** Decrypts an encrypted [Metadata]. */
