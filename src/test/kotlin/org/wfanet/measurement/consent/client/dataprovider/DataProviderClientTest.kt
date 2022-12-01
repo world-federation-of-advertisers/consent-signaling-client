@@ -16,7 +16,11 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
-import kotlinx.coroutines.runBlocking
+import com.google.protobuf.kotlin.toByteStringUtf8
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXReason
+import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -27,11 +31,15 @@ import org.wfanet.measurement.api.v2alpha.MeasurementKt.ResultKt.reach
 import org.wfanet.measurement.api.v2alpha.MeasurementKt.result
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisitionSpec
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
-import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.NonceMismatchException
+import org.wfanet.measurement.consent.client.common.PublicKeyMismatchException
+import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.measurementconsumer.decryptMetadata
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
@@ -39,10 +47,13 @@ import org.wfanet.measurement.consent.client.measurementconsumer.signRequisition
 import org.wfanet.measurement.consent.client.measurementconsumer.verifyResult
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.MC_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
 
 private const val NONCE = -7452112597811743614 // Hex: 9894C7134537B482
@@ -74,21 +85,44 @@ private val FAKE_EVENT_GROUP_METADATA = metadata {
 @RunWith(JUnit4::class)
 class DataProviderClientTest {
   @Test
-  fun `verifyMeasurementSpec verifies valid MeasurementSpec signature`() = runBlocking {
+  fun `verifyMeasurementSpec does not throw when signed MeasurementSpec is valid`() {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData = signMessage(FAKE_MEASUREMENT_SPEC, signingKeyHandle)
+    val signedMeasurementSpec: SignedData = FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        verifyMeasurementSpec(
-          signedMeasurementSpec = signedMeasurementSpec,
-          measurementConsumerCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyMeasurementSpec(signedMeasurementSpec, signingKeyHandle.certificate, MC_TRUSTED_ISSUER)
   }
 
   @Test
-  fun `decryptRequisitionSpec returns decrypted RequisitionSpec`() = runBlocking {
+  fun `verifyMeasurementSpec throws when signature is invalid`() {
+    val signingKeyHandle = MC_SIGNING_KEY
+    val signedMeasurementSpec: SignedData =
+      FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle).copy {
+        signature = signature.concat("garbage".toByteStringUtf8())
+      }
+
+    assertFailsWith<SignatureException> {
+      verifyMeasurementSpec(signedMeasurementSpec, signingKeyHandle.certificate, MC_TRUSTED_ISSUER)
+    }
+  }
+
+  @Test
+  fun `verifyMeasurementSpec throws when certificate path is invalid`() {
+    val signingKeyHandle = MC_SIGNING_KEY
+    val signedMeasurementSpec: SignedData = FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle)
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyMeasurementSpec(
+          signedMeasurementSpec,
+          signingKeyHandle.certificate,
+          EDP_TRUSTED_ISSUER
+        )
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
+  @Test
+  fun `decryptRequisitionSpec returns decrypted RequisitionSpec`() {
     // Encrypt a RequisitionSpec (as SignedData) using the Measurement Consumer Functions
     val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
     val encryptedRequisitionSpec =
@@ -104,60 +138,158 @@ class DataProviderClientTest {
       RequisitionSpec.parseFrom(decryptedSignedDataRequisitionSpec.data)
 
     assertThat(signedRequisitionSpec).isEqualTo(decryptedSignedDataRequisitionSpec)
-    assertThat(
-        verifyRequisitionSpec(
-          signedRequisitionSpec = signedRequisitionSpec,
-          requisitionSpec = decryptedRequisitionSpec,
-          measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
-          measurementSpec = FAKE_MEASUREMENT_SPEC,
-        )
-      )
-      .isTrue()
+    verifyRequisitionSpec(
+      signedRequisitionSpec,
+      decryptedRequisitionSpec,
+      FAKE_MEASUREMENT_SPEC,
+      MC_SIGNING_KEY.certificate,
+      MC_TRUSTED_ISSUER
+    )
   }
 
   @Test
-  fun `verifyRequistionSpec verifies valid RequistionSpec signature`() = runBlocking {
+  fun `verifyRequisitionSpec does not throw when signed RequisitionSpec is valid`() {
     val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
 
-    assertThat(
+    verifyRequisitionSpec(
+      signedRequisitionSpec,
+      FAKE_REQUISITION_SPEC,
+      FAKE_MEASUREMENT_SPEC,
+      MC_SIGNING_KEY.certificate,
+      MC_TRUSTED_ISSUER
+    )
+  }
+
+  @Test
+  fun `verifyRequisitionSpec throws when nonce mismatches`() {
+    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val measurementSpec = FAKE_MEASUREMENT_SPEC.copy { nonceHashes.clear() }
+
+    assertFailsWith<NonceMismatchException> {
+      verifyRequisitionSpec(
+        signedRequisitionSpec,
+        FAKE_REQUISITION_SPEC,
+        measurementSpec,
+        MC_SIGNING_KEY.certificate,
+        MC_TRUSTED_ISSUER
+      )
+    }
+  }
+
+  @Test
+  fun `verifyRequisitionSpec throws when public key mismatches`() {
+    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val measurementSpec =
+      FAKE_MEASUREMENT_SPEC.copy {
+        measurementPublicKey = measurementPublicKey.concat("garbage".toByteStringUtf8())
+      }
+
+    assertFailsWith<PublicKeyMismatchException> {
+      verifyRequisitionSpec(
+        signedRequisitionSpec,
+        FAKE_REQUISITION_SPEC,
+        measurementSpec,
+        MC_SIGNING_KEY.certificate,
+        MC_TRUSTED_ISSUER
+      )
+    }
+  }
+
+  @Test
+  fun `verifyRequisitionSpec throws when signature is invalid`() {
+    val signedRequisitionSpec =
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY).copy {
+        signature = signature.concat("garbage".toByteStringUtf8())
+      }
+
+    assertFailsWith<SignatureException> {
+      verifyRequisitionSpec(
+        signedRequisitionSpec,
+        FAKE_REQUISITION_SPEC,
+        FAKE_MEASUREMENT_SPEC,
+        MC_SIGNING_KEY.certificate,
+        MC_TRUSTED_ISSUER
+      )
+    }
+  }
+
+  @Test
+  fun `verifyRequisitionSpec throws certificate path is invalid`() {
+    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
         verifyRequisitionSpec(
-          signedRequisitionSpec = signedRequisitionSpec,
-          requisitionSpec = FAKE_REQUISITION_SPEC,
-          measurementConsumerCertificate = MC_SIGNING_KEY.certificate,
-          measurementSpec = FAKE_MEASUREMENT_SPEC,
+          signedRequisitionSpec,
+          FAKE_REQUISITION_SPEC,
+          FAKE_MEASUREMENT_SPEC,
+          MC_SIGNING_KEY.certificate,
+          EDP_TRUSTED_ISSUER
         )
-      )
-      .isTrue()
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
   }
 
   @Test
-  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+  fun `verifyElGamalPublicKey does not throw when signed key is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        verifyElGamalPublicKey(
-          elGamalPublicKeyData = signedElGamalPublicKey.data,
-          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-          duchyCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyElGamalPublicKey(
+      signedElGamalPublicKey,
+      signingKeyHandle.certificate,
+      DUCHY_TRUSTED_ISSUER
+    )
   }
 
   @Test
-  fun `signResult returns valid signature`() = runBlocking {
+  fun `verifyElGamalPublicKey throws when signature is invalid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle).copy {
+        signature = signature.concat("garbage".toByteStringUtf8())
+      }
+
+    assertFailsWith<SignatureException> {
+      verifyElGamalPublicKey(
+        signedElGamalPublicKey,
+        signingKeyHandle.certificate,
+        DUCHY_TRUSTED_ISSUER
+      )
+    }
+  }
+
+  @Test
+  fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyElGamalPublicKey(
+          signedElGamalPublicKey,
+          signingKeyHandle.certificate,
+          MC_TRUSTED_ISSUER
+        )
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
+  @Test
+  fun `signResult returns valid signature`() {
     val signedResult =
       signResult(
         result = FAKE_MEASUREMENT_RESULT,
         dataProviderSigningKey = EDP_SIGNING_KEY,
       )
 
-    assertThat(verifyResult(signedResult, EDP_SIGNING_KEY.certificate)).isTrue()
+    verifyResult(signedResult, EDP_SIGNING_KEY.certificate, EDP_TRUSTED_ISSUER)
   }
 
   @Test
-  fun `encryptMetadata returns encrypted Metadata`() = runBlocking {
+  fun `encryptMetadata returns encrypted Metadata`() {
     val encryptedMetadata =
       encryptMetadata(
         metadata = FAKE_EVENT_GROUP_METADATA,
@@ -172,11 +304,14 @@ class DataProviderClientTest {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
     private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
+    private val MC_TRUSTED_ISSUER = readCertificate(MC_1_ROOT_CERT_PEM_FILE)
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
     private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val EDP_PUBLIC_KEY = EDP_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
   }

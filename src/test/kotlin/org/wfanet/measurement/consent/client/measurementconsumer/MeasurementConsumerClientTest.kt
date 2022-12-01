@@ -16,7 +16,11 @@ package org.wfanet.measurement.consent.client.measurementconsumer
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
-import kotlinx.coroutines.runBlocking
+import com.google.protobuf.kotlin.toByteStringUtf8
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXReason
+import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -26,18 +30,22 @@ import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
-import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.dataprovider.encryptMetadata
 import org.wfanet.measurement.consent.client.duchy.encryptResult
 import org.wfanet.measurement.consent.client.duchy.signResult
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.MC_1_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -75,7 +83,7 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `signRequisitionSpec returns valid signature`() = runBlocking {
+  fun `signRequisitionSpec returns valid signature`() {
     val requisitionSpec =
       RequisitionSpec.newBuilder()
         .apply {
@@ -97,7 +105,7 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `encryptRequisitionSpec returns encrypted RequisitionSpec`() = runBlocking {
+  fun `encryptRequisitionSpec returns encrypted RequisitionSpec`() {
     val signedRequisitionSpec =
       SignedData.newBuilder()
         .apply {
@@ -118,7 +126,7 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `signMeasurementSpec returns valid signature`() = runBlocking {
+  fun `signMeasurementSpec returns valid signature`() {
     val signedMeasurementSpec =
       signMeasurementSpec(
         measurementSpec = FAKE_MEASUREMENT_SPEC,
@@ -135,7 +143,7 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `signEncryptionPublicKey returns valid signature`() = runBlocking {
+  fun `signEncryptionPublicKey returns valid signature`() {
     val mcEncryptionPublicKey =
       EncryptionPublicKey.newBuilder()
         .apply { data = ByteString.copyFromUtf8("testMCPublicKey") }
@@ -157,7 +165,7 @@ class MeasurementConsumerClientTest {
   }
 
   @Test
-  fun `decryptResult returns decrypted MeasurementResult`() = runBlocking {
+  fun `decryptResult returns decrypted MeasurementResult`() {
     // Encrypt a Result (as SignedData) using the Duchy Aggregator Functions
     val signedResult = signResult(FAKE_MEASUREMENT_RESULT, AGGREGATOR_SIGNING_KEY)
     val encryptedSignedResult =
@@ -168,47 +176,58 @@ class MeasurementConsumerClientTest {
     val decryptedResult = Measurement.Result.parseFrom(decryptedSignedDataResult.data)
 
     assertThat(signedResult).isEqualTo(decryptedSignedDataResult)
-    assertThat(
-        verifyResult(
-          signedResult = signedResult,
-          aggregatorCertificate = AGGREGATOR_SIGNING_KEY.certificate,
-        )
-      )
-      .isTrue()
     assertThat(FAKE_MEASUREMENT_RESULT.reach.value).isEqualTo(decryptedResult.reach.value)
   }
 
   @Test
-  fun `verifyResult verifies valid MeasurementResult signature`() = runBlocking {
+  fun `verifyResult does not throw when signed Result is valid`() {
     val signingKeyHandle = AGGREGATOR_SIGNING_KEY
-    val signedResult: SignedData = signMessage(FAKE_MEASUREMENT_RESULT, signingKeyHandle)
+    val signedResult: SignedData = FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        verifyResult(
-          signedResult = signedResult,
-          aggregatorCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, AGGREGATOR_ROOT_CERT)
   }
 
   @Test
-  fun `verifiesEncryptionPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+  fun `verifyResult throws when signature is invalid`() {
+    val signingKeyHandle = AGGREGATOR_SIGNING_KEY
+    val signedResult: SignedData =
+      FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle).copy {
+        signature = "garbage".toByteStringUtf8()
+      }
+
+    assertFailsWith<SignatureException> {
+      verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, AGGREGATOR_ROOT_CERT)
+    }
+  }
+
+  @Test
+  fun `verifyResult throws when certificate path is invalid`() {
+    val signingKeyHandle = AGGREGATOR_SIGNING_KEY
+    val signedResult: SignedData = FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle)
+    val incorrectIssuer = EDP_TRUSTED_ISSUER
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, incorrectIssuer)
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
+  @Test
+  fun `verifiesEncryptionPublicKey does not throw when signed EncryptionPublicKey is valid`() {
     val signingKeyHandle = EDP_SIGNING_KEY
     val signedEncryptionPublicKey: SignedData =
-      signMessage(FAKE_ENCRYPTION_PUBLIC_KEY, signingKeyHandle)
+      FAKE_ENCRYPTION_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        verifyEncryptionPublicKey(
-          signedEncryptionPublicKey = signedEncryptionPublicKey,
-          edpCertificate = signingKeyHandle.certificate,
-        )
-      )
-      .isTrue()
+    verifyEncryptionPublicKey(
+      signedEncryptionPublicKey,
+      signingKeyHandle.certificate,
+      EDP_TRUSTED_ISSUER
+    )
   }
 
   @Test
-  fun `decryptMetadata returns decrypted Metadata`() = runBlocking {
+  fun `decryptMetadata returns decrypted Metadata`() {
     val encryptedMetadata = encryptMetadata(FAKE_EVENT_GROUP_METADATA, MC_PUBLIC_KEY)
 
     val metadata =
@@ -226,9 +245,11 @@ class MeasurementConsumerClientTest {
     private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
 
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
+    private val AGGREGATOR_ROOT_CERT = readCertificate(DUCHY_AGG_ROOT_CERT_PEM_FILE)
 
     private val MEASUREMENT_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MEASUREMENT_PUBLIC_KEY = MEASUREMENT_PRIVATE_KEY.publicKey.toEncryptionPublicKey()

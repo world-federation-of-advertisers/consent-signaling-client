@@ -15,6 +15,8 @@
 package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.protobuf.ByteString
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
@@ -26,8 +28,10 @@ import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.hashSha256
-import org.wfanet.measurement.common.crypto.verifySignature
-import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.common.crypto.validate
+import org.wfanet.measurement.consent.client.common.NonceMismatchException
+import org.wfanet.measurement.consent.client.common.PublicKeyMismatchException
+import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 import org.wfanet.measurement.consent.client.common.verifySignedData
 
@@ -39,16 +43,26 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
 }
 
 /**
- * Verify the MeasurementSpec from the MeasurementConsumer
- * 1. Verifies the [signedMeasurementSpec.data] against the [signedMeasurementSpec.signature]
- * 2. TODO: Check for replay attacks for [signedMeasurementSpec.signature]
- * 3. TODO: Verify certificate chain for [measurementConsumerCertificate]
+ * Verify the MeasurementSpec from the MeasurementConsumer.
+ *
+ * 1. Validates [measurementConsumerCertificate] against [trustedIssuer]
+ * 2. Verifies the [signature][SignedData.getSignature] of [signedMeasurementSpec] against its
+ * [data][SignedData.getData]
+ * 3. TODO: Check for replay attacks for [signedMeasurementSpec]'s signature
+ *
+ * @throws CertPathValidatorException if [measurementConsumerCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
+@Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyMeasurementSpec(
   signedMeasurementSpec: SignedData,
-  measurementConsumerCertificate: X509Certificate
-): Boolean {
-  return measurementConsumerCertificate.verifySignedData(signedMeasurementSpec)
+  measurementConsumerCertificate: X509Certificate,
+  trustedIssuer: X509Certificate
+) {
+  measurementConsumerCertificate.run {
+    validate(trustedIssuer)
+    verifySignedData(signedMeasurementSpec)
+  }
 }
 
 /**
@@ -72,34 +86,59 @@ fun decryptRequisitionSpec(
  *
  * The steps are:
  * 1. TODO: Check for replay attacks
- * 2. TODO: Verify certificate chain for [measurementConsumerCertificate]
- * 3. Verify the [signedRequisitionSpec.signature]
+ * 2. Verify certificate path from [measurementConsumerCertificate] to [trustedIssuer]
+ * 3. Verify the [signedRequisitionSpec] [signature][SignedData.getSignature]
  * 4. Compare the measurement encryption key to the one in [measurementSpec]
  * 5. Compute the hash of the nonce and verify that the list in [measurementSpec] contains it
+ *
+ * @throws CertPathValidatorException if the certificate path is invalid
+ * @throws SignatureException if the signature is invalid
+ * @throws NonceMismatchException if nonce hashes mismatch
+ * @throws PublicKeyMismatchException if the measurement public key mismatches
  */
+@Throws(
+  CertPathValidatorException::class,
+  SignatureException::class,
+  NonceMismatchException::class,
+  PublicKeyMismatchException::class
+)
 fun verifyRequisitionSpec(
   signedRequisitionSpec: SignedData,
   requisitionSpec: RequisitionSpec,
   measurementSpec: MeasurementSpec,
-  measurementConsumerCertificate: X509Certificate
-): Boolean {
-  return measurementConsumerCertificate.verifySignedData(signedRequisitionSpec) &&
-    requisitionSpec.measurementPublicKey.equals(measurementSpec.measurementPublicKey) &&
-    measurementSpec.nonceHashesList.contains(hashSha256(requisitionSpec.nonce))
+  measurementConsumerCertificate: X509Certificate,
+  trustedIssuer: X509Certificate
+) {
+  measurementConsumerCertificate.validate(trustedIssuer)
+  measurementConsumerCertificate.verifySignedData(signedRequisitionSpec)
+  if (requisitionSpec.measurementPublicKey != measurementSpec.measurementPublicKey) {
+    throw PublicKeyMismatchException("Measurement public key mismatch")
+  }
+  if (!measurementSpec.nonceHashesList.contains(hashSha256(requisitionSpec.nonce))) {
+    throw NonceMismatchException("Nonce hash mismatch")
+  }
 }
 
 /**
- * Verify the [elGamalPublicKeySignature] from another duchy.
- * 1. Verifies the [elGamalPublicKeyData] against the [elGamalPublicKeySignature]
- * 2. TODO: Check for replay attacks for [elGamalPublicKeySignature]
- * 3. TODO: Verify certificate chain for [duchyCertificate]
+ * Verifies the [signedElGamalPublicKey] from a Duchy.
+ *
+ * 1. Validates the certificate path from [duchyCertificate] to [trustedDuchyIssuer]
+ * 2. Verifies the [signedElGamalPublicKey] [signature][SignedData.getSignature]
+ * 3. TODO: Check for replay attacks for the signature
+ *
+ * @throws CertPathValidatorException if [duchyCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
  */
+@Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyElGamalPublicKey(
-  elGamalPublicKeyData: ByteString,
-  elGamalPublicKeySignature: ByteString,
-  duchyCertificate: X509Certificate
-): Boolean {
-  return duchyCertificate.verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)
+  signedElGamalPublicKey: SignedData,
+  duchyCertificate: X509Certificate,
+  trustedDuchyIssuer: X509Certificate
+) {
+  duchyCertificate.run {
+    validate(trustedDuchyIssuer)
+    verifySignedData(signedElGamalPublicKey)
+  }
 }
 
 /**
@@ -108,7 +147,7 @@ fun verifyElGamalPublicKey(
  * The [dataProviderSigningKey] determines the algorithm type of the signature.
  */
 fun signResult(result: Result, dataProviderSigningKey: SigningKeyHandle): SignedData {
-  return signMessage(result, dataProviderSigningKey)
+  return result.serializeAndSign(dataProviderSigningKey)
 }
 
 /** Encrypts a [Metadata]. */
