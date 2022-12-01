@@ -17,8 +17,11 @@ package org.wfanet.measurement.consent.client.duchy
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import com.google.protobuf.kotlin.toByteStringUtf8
+import java.security.SignatureException
+import java.security.cert.CertPathValidatorException
+import java.security.cert.PKIXReason
 import java.util.Random
-import kotlinx.coroutines.runBlocking
+import kotlin.test.assertFailsWith
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
@@ -31,13 +34,15 @@ import org.wfanet.measurement.api.v2alpha.requisition
 import org.wfanet.measurement.api.v2alpha.signedData
 import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
-import org.wfanet.measurement.consent.client.common.signMessage
+import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.dataprovider.computeRequisitionFingerprint
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
@@ -78,7 +83,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifyRequisitionFulfillment returns true when verified`() = runBlocking {
+  fun `verifyRequisitionFulfillment returns true when verified`() {
     // Compute what Duchy would store from Kingdom data.
     val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
     val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
@@ -99,7 +104,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifyRequisitionFulfillment returns false when nonce doesn't match`() = runBlocking {
+  fun `verifyRequisitionFulfillment returns false when nonce doesn't match`() {
     // Compute what Duchy would store from Kingdom data.
     val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
     val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
@@ -120,7 +125,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifyDataProviderParticipation returns true when verified`() = runBlocking {
+  fun `verifyDataProviderParticipation returns true when verified`() {
     assertThat(
         verifyDataProviderParticipation(
           MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
@@ -131,7 +136,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifyDataProviderParticipation returns false when missing a nonce`() = runBlocking {
+  fun `verifyDataProviderParticipation returns false when missing a nonce`() {
     assertThat(
         verifyDataProviderParticipation(
           MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
@@ -142,7 +147,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifyDataProviderParticipation returns false when nonce mismatches hash`() = runBlocking {
+  fun `verifyDataProviderParticipation returns false when nonce mismatches hash`() {
     assertThat(
         verifyDataProviderParticipation(
           MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
@@ -153,7 +158,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `duchy sign result`() = runBlocking {
+  fun `duchy sign result`() {
     val someMeasurementResult =
       MeasurementResult.newBuilder()
         .apply {
@@ -176,7 +181,7 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `duchy encrypt result`() = runBlocking {
+  fun `duchy encrypt result`() {
     val measurementEncryptionKey = TinkPrivateKeyHandle.generateEcies()
     val measurementPublicKey = measurementEncryptionKey.publicKey.toEncryptionPublicKey()
     val signedMeasurementResult =
@@ -199,18 +204,54 @@ class DuchyClientTest {
   }
 
   @Test
-  fun `verifiesElgamalPublicKey verifies valid EncryptionPublicKey signature`() = runBlocking {
+  fun `verifyElGamalPublicKey does not throw exception when signature is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData = signMessage(FAKE_EL_GAMAL_PUBLIC_KEY, signingKeyHandle)
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
 
-    assertThat(
-        org.wfanet.measurement.consent.client.dataprovider.verifyElGamalPublicKey(
-          elGamalPublicKeyData = signedElGamalPublicKey.data,
-          elGamalPublicKeySignature = signedElGamalPublicKey.signature,
-          duchyCertificate = signingKeyHandle.certificate,
+    verifyElGamalPublicKey(
+      signedElGamalPublicKey.data,
+      signedElGamalPublicKey.signature,
+      signingKeyHandle.certificate,
+      DUCHY_TRUSTED_ISSUER
+    )
+  }
+
+  @Test
+  fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+    val incorrectIssuer = DUCHY_SIGNING_KEY.certificate
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyElGamalPublicKey(
+          signedElGamalPublicKey.data,
+          signedElGamalPublicKey.signature,
+          signingKeyHandle.certificate,
+          incorrectIssuer
         )
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
+  @Test
+  fun `verifyElGamalPublicKey throws when signature is invalid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedElGamalPublicKey: SignedData =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+    val badSignature: ByteString =
+      signedElGamalPublicKey.signature.concat("garbage".toByteStringUtf8())
+
+    assertFailsWith<SignatureException> {
+      verifyElGamalPublicKey(
+        signedElGamalPublicKey.data,
+        badSignature,
+        signingKeyHandle.certificate,
+        DUCHY_TRUSTED_ISSUER
       )
-      .isTrue()
+    }
   }
 
   companion object {
@@ -219,5 +260,6 @@ class DuchyClientTest {
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
   }
 }

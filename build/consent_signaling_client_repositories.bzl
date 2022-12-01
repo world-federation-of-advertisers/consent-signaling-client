@@ -24,14 +24,14 @@ def consent_signaling_client_repositories():
     """
     http_archive(
         name = "wfa_common_jvm",
-        sha256 = "9505024528afc9e7a9e126a297458fa4503a33ff21c55bac58e5184385f492e2",
-        strip_prefix = "common-jvm-0.35.0",
-        url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/v0.35.0.tar.gz",
+        sha256 = "6a88080cd751566c2f97b31dbc7ef5e8e1016957c87866e25229e01c48d71ab4",
+        strip_prefix = "common-jvm-0.49.0",
+        url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/refs/tags/v0.49.0.tar.gz",
     )
 
     http_archive(
         name = "wfa_measurement_proto",
-        sha256 = "da28ccac88a12b3b75b974b92604b8e332b8bc91cd276afab1ee41415fa320a3",
-        strip_prefix = "cross-media-measurement-api-0.22.2",
-        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.22.2.tar.gz",
+        sha256 = "8412e478f15119b624e6696b578ca308b55f61a240e83ea2f72444692118d1ff",
+        strip_prefix = "cross-media-measurement-api-0.24.0",
+        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.24.0.tar.gz",
     )

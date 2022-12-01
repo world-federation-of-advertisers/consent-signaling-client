@@ -16,11 +16,19 @@
 
 package org.wfanet.measurement.consent.client.common
 
+import java.security.SignatureException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.verifySignature
 
-/** Verify the [signedData.data] against [signedData.signature] */
-fun X509Certificate.verifySignedData(signedData: SignedData): Boolean {
-  return verifySignature(signedData.data, signedData.signature)
+/**
+ * Verifies the [signature][SignedData.getSignature] against the [data][SignedData.getData].
+ *
+ * @throws SignatureException if the signature is invalid
+ */
+@Throws(SignatureException::class)
+fun X509Certificate.verifySignedData(signedData: SignedData) {
+  if (!verifySignature(signedData.data, signedData.signature)) {
+    throw SignatureException("Signature is invalid")
+  }
 }
