@@ -44,10 +44,9 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
 
 /**
  * Verify the MeasurementSpec from the MeasurementConsumer.
- *
  * 1. Validates [measurementConsumerCertificate] against [trustedIssuer]
  * 2. Verifies the [signature][SignedData.getSignature] of [signedMeasurementSpec] against its
- * [data][SignedData.getData]
+ *    [data][SignedData.getData]
  * 3. TODO: Check for replay attacks for [signedMeasurementSpec]'s signature
  *
  * @throws CertPathValidatorException if [measurementConsumerCertificate] is invalid
@@ -69,7 +68,7 @@ fun verifyMeasurementSpec(
  * Decrypts a signed [RequisitionSpec].
  *
  * @param encryptedSignedDataRequisitionSpec an encrypted [SignedData] containing a
- * [RequisitionSpec].
+ *   [RequisitionSpec].
  * @param dataProviderPrivateKey the DataProvider's encryption private key.
  */
 fun decryptRequisitionSpec(
@@ -121,7 +120,6 @@ fun verifyRequisitionSpec(
 
 /**
  * Verifies the [signedElGamalPublicKey] from a Duchy.
- *
  * 1. Validates the certificate path from [duchyCertificate] to [trustedDuchyIssuer]
  * 2. Verifies the [signedElGamalPublicKey] [signature][SignedData.getSignature]
  * 3. TODO: Check for replay attacks for the signature

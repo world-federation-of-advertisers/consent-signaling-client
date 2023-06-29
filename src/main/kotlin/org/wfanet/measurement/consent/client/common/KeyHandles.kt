@@ -26,8 +26,8 @@ fun EncryptionPublicKey.toPublicKeyHandle(): PublicKeyHandle {
   @Suppress("WHEN_ENUM_CAN_BE_NULL_IN_JAVA") // protobuf enum fields are never null.
   return when (format) {
     EncryptionPublicKey.Format.TINK_KEYSET -> TinkPublicKeyHandle(data)
-    EncryptionPublicKey.Format.FORMAT_UNSPECIFIED, EncryptionPublicKey.Format.UNRECOGNIZED ->
-      error("format not specified")
+    EncryptionPublicKey.Format.FORMAT_UNSPECIFIED,
+    EncryptionPublicKey.Format.UNRECOGNIZED -> error("format not specified")
   }
 }
 

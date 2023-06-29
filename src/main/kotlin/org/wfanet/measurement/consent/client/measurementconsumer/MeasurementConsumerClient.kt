@@ -102,7 +102,6 @@ fun decryptResult(
 
 /**
  * Verifies a [MeasurementResult] from a DataProvider or the Aggregator
- *
  * 1. Validates [certificate] against [trustedIssuer]
  * 2. Verifies the [signedResult] data against the [signedResult] signature
  * 3. TODO: Check for replay attacks for the [signedResult] signature
@@ -125,10 +124,9 @@ fun verifyResult(
 
 /**
  * Verifies the EncryptionPublicKey from the DataProvider
- *
  * 1. Validates the certificate path from [dataProviderCertificate] to [trustedIssuer]
  * 2. Verifies the [signature][SignedData.getSignature] of [signedEncryptionPublicKey] against its
- * [data][SignedData.getData]
+ *    [data][SignedData.getData]
  * 3. TODO: Check for replay attacks for [dataProviderCertificate]'s signature
  *
  * @throws CertPathValidatorException if [dataProviderCertificate] is invalid
