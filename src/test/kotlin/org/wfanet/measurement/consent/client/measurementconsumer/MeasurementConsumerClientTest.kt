@@ -31,7 +31,7 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.copy
-import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
@@ -79,7 +79,7 @@ class MeasurementConsumerClientTest {
     val dataProviderListSalt = ByteString.copyFromUtf8("salt")
     val concatenation = dataProviderList.concat(dataProviderListSalt)
     assertThat(createDataProviderListHash(dataProviderList, dataProviderListSalt))
-      .isEqualTo(hashSha256(concatenation))
+      .isEqualTo(Hashing.hashSha256(concatenation))
   }
 
   @Test

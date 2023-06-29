@@ -33,7 +33,7 @@ import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisition
 import org.wfanet.measurement.api.v2alpha.signedData
 import org.wfanet.measurement.common.HexString
-import org.wfanet.measurement.common.crypto.hashSha256
+import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
@@ -64,7 +64,7 @@ class DuchyClientTest {
   fun `computeRequisitionFingerprint returns Requisition fingerprint`() {
     // Compute what Duchy would store from Kingdom data.
     val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
-    val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
+    val requisitionSpecHash = Hashing.hashSha256(encryptedRequisitionSpec)
     val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
 
     val requisitionFingerprint =
@@ -86,7 +86,7 @@ class DuchyClientTest {
   fun `verifyRequisitionFulfillment returns true when verified`() {
     // Compute what Duchy would store from Kingdom data.
     val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
-    val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
+    val requisitionSpecHash = Hashing.hashSha256(encryptedRequisitionSpec)
     val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
     val requisitionFingerprint =
       computeRequisitionFingerprint(serializedMeasurementSpec, requisitionSpecHash)
@@ -107,7 +107,7 @@ class DuchyClientTest {
   fun `verifyRequisitionFulfillment returns false when nonce doesn't match`() {
     // Compute what Duchy would store from Kingdom data.
     val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
-    val requisitionSpecHash = hashSha256(encryptedRequisitionSpec)
+    val requisitionSpecHash = Hashing.hashSha256(encryptedRequisitionSpec)
     val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
     val requisitionFingerprint =
       computeRequisitionFingerprint(serializedMeasurementSpec, requisitionSpecHash)

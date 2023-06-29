@@ -24,9 +24,9 @@ import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResul
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
-import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.serializeAndSign
@@ -38,7 +38,7 @@ fun createDataProviderListHash(
   dataProviderList: ByteString,
   dataProviderListSalt: ByteString
 ): ByteString {
-  return hashSha256(dataProviderList.concat(dataProviderListSalt))
+  return Hashing.hashSha256(dataProviderList.concat(dataProviderListSalt))
 }
 
 /**
