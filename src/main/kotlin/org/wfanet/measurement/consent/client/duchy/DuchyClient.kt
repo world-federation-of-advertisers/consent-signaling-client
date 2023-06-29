@@ -105,7 +105,6 @@ fun signElgamalPublicKey(
 
 /**
  * Verifies the [elGamalPublicKeySignature] from a Duchy.
- *
  * 1. Validates [duchyCertificate] against [trustedDuchyIssuer]
  * 2. Verifies the [elGamalPublicKeyData] against the [elGamalPublicKeySignature]
  * 3. TODO: Check for replay attacks for [elGamalPublicKeySignature]
