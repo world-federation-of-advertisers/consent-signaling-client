@@ -25,9 +25,9 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
-import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.consent.client.common.NonceMismatchException
 import org.wfanet.measurement.consent.client.common.PublicKeyMismatchException
@@ -37,8 +37,10 @@ import org.wfanet.measurement.consent.client.common.verifySignedData
 
 /** Computes the "requisition fingerprint" for [requisition]. */
 fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
-  return hashSha256(
-    requisition.measurementSpec.data.concat(hashSha256(requisition.encryptedRequisitionSpec))
+  return Hashing.hashSha256(
+    requisition.measurementSpec.data.concat(
+      Hashing.hashSha256(requisition.encryptedRequisitionSpec)
+    )
   )
 }
 
@@ -113,7 +115,7 @@ fun verifyRequisitionSpec(
   if (requisitionSpec.measurementPublicKey != measurementSpec.measurementPublicKey) {
     throw PublicKeyMismatchException("Measurement public key mismatch")
   }
-  if (!measurementSpec.nonceHashesList.contains(hashSha256(requisitionSpec.nonce))) {
+  if (!measurementSpec.nonceHashesList.contains(Hashing.hashSha256(requisitionSpec.nonce))) {
     throw NonceMismatchException("Nonce hash mismatch")
   }
 }

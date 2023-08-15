@@ -15,6 +15,7 @@
 package org.wfanet.measurement.consent.client.duchy
 
 import com.google.protobuf.ByteString
+import java.nio.ByteOrder
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
@@ -23,8 +24,8 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
-import org.wfanet.measurement.common.crypto.hashSha256
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.serializeAndSign
@@ -43,7 +44,7 @@ fun computeRequisitionFingerprint(
   serializedMeasurementSpec: ByteString,
   requisitionSpecHash: ByteString
 ): ByteString {
-  return hashSha256(serializedMeasurementSpec.concat(requisitionSpecHash))
+  return Hashing.hashSha256(serializedMeasurementSpec.concat(requisitionSpecHash))
 }
 
 /**
@@ -63,7 +64,7 @@ fun verifyRequisitionFulfillment(
   requisitionFingerprint: ByteString,
   nonce: Long
 ): Boolean {
-  val nonceHash = hashSha256(nonce)
+  val nonceHash = Hashing.hashSha256(nonce, ByteOrder.BIG_ENDIAN)
   return requisitionFingerprint == requisition.requisitionFingerprint &&
     nonceHash == requisition.nonceHash &&
     measurementSpec.nonceHashesList.contains(nonceHash)
@@ -74,7 +75,7 @@ fun verifyDataProviderParticipation(
   measurementSpec: MeasurementSpec,
   nonces: Iterable<Long>
 ): Boolean {
-  val computedNonceHashes = nonces.map { hashSha256(it) }.toSet()
+  val computedNonceHashes = nonces.map { Hashing.hashSha256(it, ByteOrder.BIG_ENDIAN) }.toSet()
   return measurementSpec.nonceHashesCount == computedNonceHashes.size &&
     computedNonceHashes.containsAll(measurementSpec.nonceHashesList)
 }
