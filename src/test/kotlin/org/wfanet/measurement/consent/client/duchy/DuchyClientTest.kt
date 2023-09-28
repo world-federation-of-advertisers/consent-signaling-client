@@ -33,7 +33,9 @@ import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisition
 import org.wfanet.measurement.api.v2alpha.signedData
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.crypto.HashAlgorithm
 import org.wfanet.measurement.common.crypto.Hashing
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
@@ -167,12 +169,10 @@ class DuchyClientTest {
         }
         .build()
     val signedResult =
-      signResult(
-        measurementResult = someMeasurementResult,
-        aggregatorSigningKey = AGGREGATOR_SIGNING_KEY,
-      )
+      signResult(someMeasurementResult, AGGREGATOR_SIGNING_KEY, AGGREGATOR_SIGNING_ALGORITHM)
     assertThat(
         AGGREGATOR_SIGNING_KEY.certificate.verifySignature(
+          AGGREGATOR_SIGNING_ALGORITHM,
           signedResult.data,
           signedResult.signature
         )
@@ -207,11 +207,12 @@ class DuchyClientTest {
   fun `verifyElGamalPublicKey does not throw exception when signature is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
 
     verifyElGamalPublicKey(
       signedElGamalPublicKey.data,
       signedElGamalPublicKey.signature,
+      DUCHY_SIGNING_ALGORITHM,
       signingKeyHandle.certificate,
       DUCHY_TRUSTED_ISSUER
     )
@@ -221,7 +222,7 @@ class DuchyClientTest {
   fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
     val incorrectIssuer = DUCHY_SIGNING_KEY.certificate
 
     val exception =
@@ -229,6 +230,7 @@ class DuchyClientTest {
         verifyElGamalPublicKey(
           signedElGamalPublicKey.data,
           signedElGamalPublicKey.signature,
+          DUCHY_SIGNING_ALGORITHM,
           signingKeyHandle.certificate,
           incorrectIssuer
         )
@@ -240,7 +242,7 @@ class DuchyClientTest {
   fun `verifyElGamalPublicKey throws when signature is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
     val badSignature: ByteString =
       signedElGamalPublicKey.signature.concat("garbage".toByteStringUtf8())
 
@@ -248,6 +250,7 @@ class DuchyClientTest {
       verifyElGamalPublicKey(
         signedElGamalPublicKey.data,
         badSignature,
+        DUCHY_SIGNING_ALGORITHM,
         signingKeyHandle.certificate,
         DUCHY_TRUSTED_ISSUER
       )
@@ -257,9 +260,19 @@ class DuchyClientTest {
   companion object {
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
+    private val AGGREGATOR_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        AGGREGATOR_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        DUCHY_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
     private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
   }
 }

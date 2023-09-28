@@ -24,14 +24,16 @@ def consent_signaling_client_repositories():
     """
     http_archive(
         name = "wfa_common_jvm",
-        sha256 = "2719f6147eccd2a493e573720c64fa3a13f344840f8416060753d97fe13ab942",
-        strip_prefix = "common-jvm-0.66.0",
-        url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/refs/tags/v0.66.0.tar.gz",
+        sha256 = "ac63eff9ec91e698fc002b2f643cde087ced579f613e74c4cc5e32a6a89933a2",
+        # TODO(world-federation-of-advertisers/common-jvm#218): Use version.
+        strip_prefix = "common-jvm-136c829fddddbc4396e3ac25b3d7fa72dd485a1d",
+        url = "https://github.com/world-federation-of-advertisers/common-jvm/archive/136c829fddddbc4396e3ac25b3d7fa72dd485a1d.tar.gz",
     )
 
     http_archive(
         name = "wfa_measurement_proto",
-        sha256 = "b6ee5ff56c8c8ec8f6f44c93fe273d4120779dcd0954e9d69929137da2b2a4a7",
-        strip_prefix = "cross-media-measurement-api-0.42.0",
-        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/refs/tags/v0.42.0.tar.gz",
+        sha256 = "3f4d4dd360f55e9c0fe033e86191f3d7c1187611650ef08c6a299ce917eb4b77",
+        # TODO(world-federation-of-advertisers/cross-media-measurement-api#177): Use version.
+        strip_prefix = "cross-media-measurement-api-e2b2cf0f1b6867658dd446d31fe0b1bc16897f86",
+        url = "https://github.com/world-federation-of-advertisers/cross-media-measurement-api/archive/e2b2cf0f1b6867658dd446d31fe0b1bc16897f86.tar.gz",
     )

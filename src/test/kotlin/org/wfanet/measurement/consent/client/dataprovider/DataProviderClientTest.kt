@@ -35,6 +35,8 @@ import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisitionSpec
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.crypto.HashAlgorithm
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.consent.client.common.NonceMismatchException
@@ -87,7 +89,8 @@ class DataProviderClientTest {
   @Test
   fun `verifyMeasurementSpec does not throw when signed MeasurementSpec is valid`() {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData = FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle)
+    val signedMeasurementSpec: SignedData =
+      FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     verifyMeasurementSpec(signedMeasurementSpec, signingKeyHandle.certificate, MC_TRUSTED_ISSUER)
   }
@@ -96,7 +99,7 @@ class DataProviderClientTest {
   fun `verifyMeasurementSpec throws when signature is invalid`() {
     val signingKeyHandle = MC_SIGNING_KEY
     val signedMeasurementSpec: SignedData =
-      FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle).copy {
+      FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM).copy {
         signature = signature.concat("garbage".toByteStringUtf8())
       }
 
@@ -108,7 +111,8 @@ class DataProviderClientTest {
   @Test
   fun `verifyMeasurementSpec throws when certificate path is invalid`() {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData = FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle)
+    val signedMeasurementSpec: SignedData =
+      FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
@@ -124,7 +128,8 @@ class DataProviderClientTest {
   @Test
   fun `decryptRequisitionSpec returns decrypted RequisitionSpec`() {
     // Encrypt a RequisitionSpec (as SignedData) using the Measurement Consumer Functions
-    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val signedRequisitionSpec =
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
     val encryptedRequisitionSpec =
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
@@ -149,7 +154,8 @@ class DataProviderClientTest {
 
   @Test
   fun `verifyRequisitionSpec does not throw when signed RequisitionSpec is valid`() {
-    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val signedRequisitionSpec =
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
 
     verifyRequisitionSpec(
       signedRequisitionSpec,
@@ -162,7 +168,8 @@ class DataProviderClientTest {
 
   @Test
   fun `verifyRequisitionSpec throws when nonce mismatches`() {
-    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val signedRequisitionSpec =
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
     val measurementSpec = FAKE_MEASUREMENT_SPEC.copy { nonceHashes.clear() }
 
     assertFailsWith<NonceMismatchException> {
@@ -178,7 +185,8 @@ class DataProviderClientTest {
 
   @Test
   fun `verifyRequisitionSpec throws when public key mismatches`() {
-    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val signedRequisitionSpec =
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
     val measurementSpec =
       FAKE_MEASUREMENT_SPEC.copy {
         measurementPublicKey = measurementPublicKey.concat("garbage".toByteStringUtf8())
@@ -198,7 +206,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyRequisitionSpec throws when signature is invalid`() {
     val signedRequisitionSpec =
-      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY).copy {
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM).copy {
         signature = signature.concat("garbage".toByteStringUtf8())
       }
 
@@ -215,7 +223,8 @@ class DataProviderClientTest {
 
   @Test
   fun `verifyRequisitionSpec throws certificate path is invalid`() {
-    val signedRequisitionSpec = signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY)
+    val signedRequisitionSpec =
+      signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
@@ -234,7 +243,7 @@ class DataProviderClientTest {
   fun `verifyElGamalPublicKey does not throw when signed key is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     verifyElGamalPublicKey(
       signedElGamalPublicKey,
@@ -247,7 +256,7 @@ class DataProviderClientTest {
   fun `verifyElGamalPublicKey throws when signature is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle).copy {
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM).copy {
         signature = signature.concat("garbage".toByteStringUtf8())
       }
 
@@ -264,7 +273,7 @@ class DataProviderClientTest {
   fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedData =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
@@ -279,11 +288,7 @@ class DataProviderClientTest {
 
   @Test
   fun `signResult returns valid signature`() {
-    val signedResult =
-      signResult(
-        result = FAKE_MEASUREMENT_RESULT,
-        dataProviderSigningKey = EDP_SIGNING_KEY,
-      )
+    val signedResult = signResult(FAKE_MEASUREMENT_RESULT, EDP_SIGNING_KEY, EDP_SIGNING_ALGORITHM)
 
     verifyResult(signedResult, EDP_SIGNING_KEY.certificate, EDP_TRUSTED_ISSUER)
   }
@@ -302,6 +307,11 @@ class DataProviderClientTest {
 
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
+    private val MC_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        MC_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
     private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
     private val MC_TRUSTED_ISSUER = readCertificate(MC_1_ROOT_CERT_PEM_FILE)
@@ -311,6 +321,11 @@ class DataProviderClientTest {
     private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        EDP_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
     private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
     private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val EDP_PUBLIC_KEY = EDP_PRIVATE_KEY.publicKey.toEncryptionPublicKey()

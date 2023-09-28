@@ -19,6 +19,7 @@ package org.wfanet.measurement.consent.client.common
 import java.security.SignatureException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.verifySignature
 
 /**
@@ -28,7 +29,11 @@ import org.wfanet.measurement.common.crypto.verifySignature
  */
 @Throws(SignatureException::class)
 fun X509Certificate.verifySignedData(signedData: SignedData) {
-  if (!verifySignature(signedData.data, signedData.signature)) {
+  val oid = signedData.signatureAlgorithmOid.ifEmpty { sigAlgOID }
+  val algorithm =
+    checkNotNull(SignatureAlgorithm.fromOid(oid)) { "Unsupported signature algorithm OID $oid" }
+
+  if (!verifySignature(algorithm, signedData.data, signedData.signature)) {
     throw SignatureException("Signature is invalid")
   }
 }

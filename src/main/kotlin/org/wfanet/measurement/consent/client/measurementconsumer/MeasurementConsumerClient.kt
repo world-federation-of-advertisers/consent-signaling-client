@@ -26,9 +26,9 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.validate
-import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 import org.wfanet.measurement.consent.client.common.verifySignedData
@@ -48,9 +48,10 @@ fun createDataProviderListHash(
  */
 fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
-  measurementConsumerSigningKey: SigningKeyHandle
+  measurementConsumerSigningKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = measurementConsumerSigningKey.defaultAlgorithm
 ): SignedData {
-  return requisitionSpec.serializeAndSign(measurementConsumerSigningKey)
+  return requisitionSpec.serializeAndSign(measurementConsumerSigningKey, algorithm)
 }
 
 /**
@@ -74,17 +75,19 @@ fun encryptRequisitionSpec(
  */
 fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
-  measurementConsumerSigningKey: SigningKeyHandle
+  measurementConsumerSigningKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = measurementConsumerSigningKey.defaultAlgorithm
 ): SignedData {
-  return measurementSpec.serializeAndSign(measurementConsumerSigningKey)
+  return measurementSpec.serializeAndSign(measurementConsumerSigningKey, algorithm)
 }
 
 /** Signs the measurementConsumer's encryptionPublicKey. */
 fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
-  signingKey: SigningKeyHandle
+  signingKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = signingKey.defaultAlgorithm
 ): SignedData {
-  return encryptionPublicKey.serializeAndSign(signingKey)
+  return encryptionPublicKey.serializeAndSign(signingKey, algorithm)
 }
 
 /**
@@ -116,9 +119,7 @@ fun verifyResult(
 ) {
   certificate.run {
     validate(trustedIssuer)
-    if (!verifySignature(signedResult.data, signedResult.signature)) {
-      throw SignatureException("Signature is invalid")
-    }
+    verifySignedData(signedResult)
   }
 }
 
