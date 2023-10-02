@@ -31,7 +31,9 @@ import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.api.v2alpha.copy
+import org.wfanet.measurement.common.crypto.HashAlgorithm
 import org.wfanet.measurement.common.crypto.Hashing
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
 import org.wfanet.measurement.common.crypto.verifySignature
@@ -92,14 +94,14 @@ class MeasurementConsumerClientTest {
         }
         .build()
 
-    val signedResult =
-      signRequisitionSpec(
-        requisitionSpec = requisitionSpec,
-        measurementConsumerSigningKey = MC_SIGNING_KEY,
-      )
+    val signedResult = signRequisitionSpec(requisitionSpec, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
 
     assertThat(
-        MC_SIGNING_KEY.certificate.verifySignature(signedResult.data, signedResult.signature)
+        MC_SIGNING_KEY.certificate.verifySignature(
+          MC_SIGNING_ALGORITHM,
+          signedResult.data,
+          signedResult.signature
+        )
       )
       .isTrue()
   }
@@ -128,13 +130,11 @@ class MeasurementConsumerClientTest {
   @Test
   fun `signMeasurementSpec returns valid signature`() {
     val signedMeasurementSpec =
-      signMeasurementSpec(
-        measurementSpec = FAKE_MEASUREMENT_SPEC,
-        measurementConsumerSigningKey = MC_SIGNING_KEY,
-      )
+      signMeasurementSpec(FAKE_MEASUREMENT_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
 
     assertThat(
         MC_SIGNING_KEY.certificate.verifySignature(
+          MC_SIGNING_ALGORITHM,
           signedMeasurementSpec.data,
           signedMeasurementSpec.signature
         )
@@ -150,13 +150,11 @@ class MeasurementConsumerClientTest {
         .build()
 
     val signedEncryptionPublicKey =
-      signEncryptionPublicKey(
-        encryptionPublicKey = mcEncryptionPublicKey,
-        signingKey = MC_SIGNING_KEY,
-      )
+      signEncryptionPublicKey(mcEncryptionPublicKey, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
 
     assertThat(
         MC_SIGNING_KEY.certificate.verifySignature(
+          MC_SIGNING_ALGORITHM,
           signedEncryptionPublicKey.data,
           signedEncryptionPublicKey.signature
         )
@@ -167,7 +165,8 @@ class MeasurementConsumerClientTest {
   @Test
   fun `decryptResult returns decrypted MeasurementResult`() {
     // Encrypt a Result (as SignedData) using the Duchy Aggregator Functions
-    val signedResult = signResult(FAKE_MEASUREMENT_RESULT, AGGREGATOR_SIGNING_KEY)
+    val signedResult =
+      signResult(FAKE_MEASUREMENT_RESULT, AGGREGATOR_SIGNING_KEY, AGGREGATOR_SIGNING_ALGORITHM)
     val encryptedSignedResult =
       encryptResult(signedResult = signedResult, measurementPublicKey = MEASUREMENT_PUBLIC_KEY)
 
@@ -182,33 +181,38 @@ class MeasurementConsumerClientTest {
   @Test
   fun `verifyResult does not throw when signed Result is valid`() {
     val signingKeyHandle = AGGREGATOR_SIGNING_KEY
-    val signedResult: SignedData = FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle)
+    val signingAlgorithm = AGGREGATOR_SIGNING_ALGORITHM
+    val signedResult: SignedData =
+      FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle, signingAlgorithm)
 
-    verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, AGGREGATOR_ROOT_CERT)
+    verifyResult(signedResult, signingKeyHandle.certificate, AGGREGATOR_ROOT_CERT)
   }
 
   @Test
   fun `verifyResult throws when signature is invalid`() {
     val signingKeyHandle = AGGREGATOR_SIGNING_KEY
+    val signingAlgorithm = AGGREGATOR_SIGNING_ALGORITHM
     val signedResult: SignedData =
-      FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle).copy {
+      FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle, signingAlgorithm).copy {
         signature = "garbage".toByteStringUtf8()
       }
 
     assertFailsWith<SignatureException> {
-      verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, AGGREGATOR_ROOT_CERT)
+      verifyResult(signedResult, signingKeyHandle.certificate, AGGREGATOR_ROOT_CERT)
     }
   }
 
   @Test
   fun `verifyResult throws when certificate path is invalid`() {
     val signingKeyHandle = AGGREGATOR_SIGNING_KEY
-    val signedResult: SignedData = FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle)
+    val signingAlgorithm = AGGREGATOR_SIGNING_ALGORITHM
+    val signedResult: SignedData =
+      FAKE_MEASUREMENT_RESULT.serializeAndSign(signingKeyHandle, signingAlgorithm)
     val incorrectIssuer = EDP_TRUSTED_ISSUER
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
-        verifyResult(signedResult, AGGREGATOR_SIGNING_KEY.certificate, incorrectIssuer)
+        verifyResult(signedResult, signingKeyHandle.certificate, incorrectIssuer)
       }
     assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
   }
@@ -216,8 +220,9 @@ class MeasurementConsumerClientTest {
   @Test
   fun `verifiesEncryptionPublicKey does not throw when signed EncryptionPublicKey is valid`() {
     val signingKeyHandle = EDP_SIGNING_KEY
+    val signingAlgorithm = EDP_SIGNING_ALGORITHM
     val signedEncryptionPublicKey: SignedData =
-      FAKE_ENCRYPTION_PUBLIC_KEY.serializeAndSign(signingKeyHandle)
+      FAKE_ENCRYPTION_PUBLIC_KEY.serializeAndSign(signingKeyHandle, signingAlgorithm)
 
     verifyEncryptionPublicKey(
       signedEncryptionPublicKey,
@@ -241,14 +246,29 @@ class MeasurementConsumerClientTest {
 
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
+    private val MC_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        MC_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
     private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        EDP_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
     private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
 
     private val AGGREGATOR_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_AGG_CERT_PEM_FILE, DUCHY_AGG_KEY_FILE)
+    private val AGGREGATOR_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        AGGREGATOR_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256
+      )!!
     private val AGGREGATOR_ROOT_CERT = readCertificate(DUCHY_AGG_ROOT_CERT_PEM_FILE)
 
     private val MEASUREMENT_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()

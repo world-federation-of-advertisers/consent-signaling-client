@@ -27,6 +27,7 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.consent.client.common.NonceMismatchException
@@ -146,8 +147,12 @@ fun verifyElGamalPublicKey(
  *
  * The [dataProviderSigningKey] determines the algorithm type of the signature.
  */
-fun signResult(result: Result, dataProviderSigningKey: SigningKeyHandle): SignedData {
-  return result.serializeAndSign(dataProviderSigningKey)
+fun signResult(
+  result: Result,
+  dataProviderSigningKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = dataProviderSigningKey.defaultAlgorithm
+): SignedData {
+  return result.serializeAndSign(dataProviderSigningKey, algorithm)
 }
 
 /** Encrypts a [Metadata]. */

@@ -25,6 +25,7 @@ import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.SignedData
 import org.wfanet.measurement.common.crypto.Hashing
+import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
@@ -83,9 +84,10 @@ fun verifyDataProviderParticipation(
 /** Signs [measurementResult] into a [SignedData] using [aggregatorSigningKey]. */
 fun signResult(
   measurementResult: Measurement.Result,
-  aggregatorSigningKey: SigningKeyHandle
+  aggregatorSigningKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = aggregatorSigningKey.defaultAlgorithm
 ): SignedData {
-  return measurementResult.serializeAndSign(aggregatorSigningKey)
+  return measurementResult.serializeAndSign(aggregatorSigningKey, algorithm)
 }
 
 /** Encrypts the signed [Measurement.Result]. */
@@ -99,9 +101,10 @@ fun encryptResult(
 /** Signs [elGamalPublicKey] into a [SignedData] using [duchySigningKey]. */
 fun signElgamalPublicKey(
   elGamalPublicKey: ElGamalPublicKey,
-  duchySigningKey: SigningKeyHandle
+  duchySigningKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = duchySigningKey.defaultAlgorithm
 ): SignedData {
-  return elGamalPublicKey.serializeAndSign(duchySigningKey)
+  return elGamalPublicKey.serializeAndSign(duchySigningKey, algorithm)
 }
 
 /**
@@ -116,12 +119,14 @@ fun signElgamalPublicKey(
 fun verifyElGamalPublicKey(
   elGamalPublicKeyData: ByteString,
   elGamalPublicKeySignature: ByteString,
+  signatureAlgorithm: SignatureAlgorithm,
   duchyCertificate: X509Certificate,
   trustedDuchyIssuer: X509Certificate
 ) {
   return duchyCertificate.run {
     validate(trustedDuchyIssuer)
-    if (!verifySignature(elGamalPublicKeyData, elGamalPublicKeySignature)) {
+
+    if (!verifySignature(signatureAlgorithm, elGamalPublicKeyData, elGamalPublicKeySignature)) {
       throw SignatureException("Signature is invalid")
     }
   }

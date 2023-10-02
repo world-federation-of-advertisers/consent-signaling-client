@@ -29,7 +29,10 @@ generate_root_certificate(
     name = "edp_1_root",
     common_name = "Some EDP 1",
     hostname = "some-edp-1.example.com",
+    newkey = "rsa:4096",
     org = "Some EDP 1",
+    pkeyopts = None,
+    sigopts = ["rsa_padding_mode:pss"],
 )
 
 generate_user_certificate(
