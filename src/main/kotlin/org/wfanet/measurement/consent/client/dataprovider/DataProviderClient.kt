@@ -14,17 +14,19 @@
 
 package org.wfanet.measurement.consent.client.dataprovider
 
+import com.google.protobuf.Any as ProtoAny
 import com.google.protobuf.ByteString
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.EncryptedMessage
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
-import org.wfanet.measurement.api.v2alpha.Measurement.Result
+import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
-import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SignatureAlgorithm
@@ -32,15 +34,17 @@ import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.consent.client.common.NonceMismatchException
 import org.wfanet.measurement.consent.client.common.PublicKeyMismatchException
+import org.wfanet.measurement.consent.client.common.decryptMessage
+import org.wfanet.measurement.consent.client.common.encryptMessage
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
-import org.wfanet.measurement.consent.client.common.verifySignedData
+import org.wfanet.measurement.consent.client.common.verifySignedMessage
 
 /** Computes the "requisition fingerprint" for [requisition]. */
 fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
   return Hashing.hashSha256(
-    requisition.measurementSpec.data.concat(
-      Hashing.hashSha256(requisition.encryptedRequisitionSpec)
+    requisition.measurementSpec.message.value.concat(
+      Hashing.hashSha256(requisition.encryptedRequisitionSpec.ciphertext)
     )
   )
 }
@@ -48,8 +52,8 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
 /**
  * Verify the MeasurementSpec from the MeasurementConsumer.
  * 1. Validates [measurementConsumerCertificate] against [trustedIssuer]
- * 2. Verifies the [signature][SignedData.getSignature] of [signedMeasurementSpec] against its
- *    [data][SignedData.getData]
+ * 2. Verifies the [signature][SignedMessage.getSignature] of [signedMeasurementSpec] against its
+ *    [data][SignedMessage.getData]
  * 3. TODO: Check for replay attacks for [signedMeasurementSpec]'s signature
  *
  * @throws CertPathValidatorException if [measurementConsumerCertificate] is invalid
@@ -57,30 +61,28 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
  */
 @Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyMeasurementSpec(
-  signedMeasurementSpec: SignedData,
+  signedMeasurementSpec: SignedMessage,
   measurementConsumerCertificate: X509Certificate,
   trustedIssuer: X509Certificate
 ) {
   measurementConsumerCertificate.run {
     validate(trustedIssuer)
-    verifySignedData(signedMeasurementSpec)
+    verifySignedMessage(signedMeasurementSpec)
   }
 }
 
 /**
  * Decrypts a signed [RequisitionSpec].
  *
- * @param encryptedSignedDataRequisitionSpec an encrypted [SignedData] containing a
+ * @param encryptedSignedMessageRequisitionSpec an encrypted [SignedMessage] containing a
  *   [RequisitionSpec].
  * @param dataProviderPrivateKey the DataProvider's encryption private key.
  */
 fun decryptRequisitionSpec(
-  encryptedSignedDataRequisitionSpec: ByteString,
+  encryptedSignedMessageRequisitionSpec: EncryptedMessage,
   dataProviderPrivateKey: PrivateKeyHandle
-): SignedData {
-  return SignedData.parseFrom(
-    dataProviderPrivateKey.hybridDecrypt(encryptedSignedDataRequisitionSpec)
-  )
+): SignedMessage {
+  return dataProviderPrivateKey.decryptMessage(encryptedSignedMessageRequisitionSpec)
 }
 
 /**
@@ -89,7 +91,7 @@ fun decryptRequisitionSpec(
  * The steps are:
  * 1. TODO: Check for replay attacks
  * 2. Verify certificate path from [measurementConsumerCertificate] to [trustedIssuer]
- * 3. Verify the [signedRequisitionSpec] [signature][SignedData.getSignature]
+ * 3. Verify the [signedRequisitionSpec] [signature][SignedMessage.getSignature]
  * 4. Compare the measurement encryption key to the one in [measurementSpec]
  * 5. Compute the hash of the nonce and verify that the list in [measurementSpec] contains it
  *
@@ -105,14 +107,14 @@ fun decryptRequisitionSpec(
   PublicKeyMismatchException::class
 )
 fun verifyRequisitionSpec(
-  signedRequisitionSpec: SignedData,
+  signedRequisitionSpec: SignedMessage,
   requisitionSpec: RequisitionSpec,
   measurementSpec: MeasurementSpec,
   measurementConsumerCertificate: X509Certificate,
   trustedIssuer: X509Certificate
 ) {
   measurementConsumerCertificate.validate(trustedIssuer)
-  measurementConsumerCertificate.verifySignedData(signedRequisitionSpec)
+  measurementConsumerCertificate.verifySignedMessage(signedRequisitionSpec)
   if (requisitionSpec.measurementPublicKey != measurementSpec.measurementPublicKey) {
     throw PublicKeyMismatchException("Measurement public key mismatch")
   }
@@ -124,7 +126,7 @@ fun verifyRequisitionSpec(
 /**
  * Verifies the [signedElGamalPublicKey] from a Duchy.
  * 1. Validates the certificate path from [duchyCertificate] to [trustedDuchyIssuer]
- * 2. Verifies the [signedElGamalPublicKey] [signature][SignedData.getSignature]
+ * 2. Verifies the [signedElGamalPublicKey] [signature][SignedMessage.getSignature]
  * 3. TODO: Check for replay attacks for the signature
  *
  * @throws CertPathValidatorException if [duchyCertificate] is invalid
@@ -132,26 +134,22 @@ fun verifyRequisitionSpec(
  */
 @Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyElGamalPublicKey(
-  signedElGamalPublicKey: SignedData,
+  signedElGamalPublicKey: SignedMessage,
   duchyCertificate: X509Certificate,
   trustedDuchyIssuer: X509Certificate
 ) {
   duchyCertificate.run {
     validate(trustedDuchyIssuer)
-    verifySignedData(signedElGamalPublicKey)
+    verifySignedMessage(signedElGamalPublicKey)
   }
 }
 
-/**
- * Signs [Result] into [SignedData]
- *
- * The [dataProviderSigningKey] determines the algorithm type of the signature.
- */
+/** Signs [result] using [dataProviderSigningKey] and [algorithm]. */
 fun signResult(
-  result: Result,
+  result: Measurement.Result,
   dataProviderSigningKey: SigningKeyHandle,
   algorithm: SignatureAlgorithm = dataProviderSigningKey.defaultAlgorithm
-): SignedData {
+): SignedMessage {
   return result.serializeAndSign(dataProviderSigningKey, algorithm)
 }
 
@@ -159,5 +157,9 @@ fun signResult(
 fun encryptMetadata(
   metadata: Metadata,
   measurementConsumerPublicKey: EncryptionPublicKey
-): ByteString =
-  measurementConsumerPublicKey.toPublicKeyHandle().hybridEncrypt(metadata.toByteString())
+): EncryptedMessage =
+  measurementConsumerPublicKey.toPublicKeyHandle().encryptMessage(ProtoAny.pack(metadata))
+
+/** Encrypts [signedResult] using [measurementConsumerPublicKey]. */
+fun encryptResult(signedResult: SignedMessage, measurementConsumerPublicKey: EncryptionPublicKey) =
+  measurementConsumerPublicKey.toPublicKeyHandle().encryptMessage(ProtoAny.pack(signedResult))

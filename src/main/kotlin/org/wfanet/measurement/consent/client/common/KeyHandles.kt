@@ -16,8 +16,16 @@
 
 package org.wfanet.measurement.consent.client.common
 
+import com.google.protobuf.Any as ProtoAny
+import com.google.protobuf.ByteString
+import com.google.protobuf.Message
+import com.google.protobuf.any
+import com.google.protobuf.kotlin.unpack
+import org.wfanet.measurement.api.v2alpha.EncryptedMessage
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
+import org.wfanet.measurement.api.v2alpha.encryptedMessage
 import org.wfanet.measurement.api.v2alpha.encryptionPublicKey
+import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.PublicKeyHandle
 import org.wfanet.measurement.common.crypto.tink.TinkPublicKeyHandle
 
@@ -43,4 +51,28 @@ fun PublicKeyHandle.toEncryptionPublicKey(): EncryptionPublicKey {
 fun TinkPublicKeyHandle.toEncryptionPublicKey() = encryptionPublicKey {
   format = EncryptionPublicKey.Format.TINK_KEYSET
   data = toByteString()
+}
+
+/** Encrypts the [value][ProtoAny.getValue] of [anyMessage]. */
+fun PublicKeyHandle.encryptMessage(
+  anyMessage: ProtoAny,
+  contextInfo: ByteString? = null
+): EncryptedMessage {
+  return encryptedMessage {
+    ciphertext = hybridEncrypt(anyMessage.value, contextInfo)
+    typeUrl = anyMessage.typeUrl
+  }
+}
+
+/** Decrypts the [ciphertext][EncryptedMessage.getCiphertext] of [encryptedMessage]. */
+inline fun <reified T : Message> PrivateKeyHandle.decryptMessage(
+  encryptedMessage: EncryptedMessage,
+  contextInfo: ByteString? = null
+): T {
+  val plaintext: ByteString = hybridDecrypt(encryptedMessage.ciphertext, contextInfo)
+  return any {
+      value = plaintext
+      typeUrl = encryptedMessage.typeUrl
+    }
+    .unpack()
 }

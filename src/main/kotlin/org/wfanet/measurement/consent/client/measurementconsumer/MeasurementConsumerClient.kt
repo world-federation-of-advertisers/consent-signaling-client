@@ -14,24 +14,28 @@
 
 package org.wfanet.measurement.consent.client.measurementconsumer
 
+import com.google.protobuf.Any as ProtoAny
 import com.google.protobuf.ByteString
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
+import org.wfanet.measurement.api.v2alpha.EncryptedMessage
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
-import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.PrivateKeyHandle
 import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.validate
+import org.wfanet.measurement.consent.client.common.decryptMessage
+import org.wfanet.measurement.consent.client.common.encryptMessage
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
-import org.wfanet.measurement.consent.client.common.verifySignedData
+import org.wfanet.measurement.consent.client.common.verifySignedMessage
 
 /** Create a SHA256 hash of the serialized [dataProviderList] using the [dataProviderListSalt]. */
 fun createDataProviderListHash(
@@ -42,7 +46,7 @@ fun createDataProviderListHash(
 }
 
 /**
- * Signs [requisitionSpec] into a [SignedData].
+ * Signs [requisitionSpec] into a [SignedMessage].
  *
  * The [measurementConsumerSigningKey] determines the algorithm type of the signature.
  */
@@ -50,26 +54,26 @@ fun signRequisitionSpec(
   requisitionSpec: RequisitionSpec,
   measurementConsumerSigningKey: SigningKeyHandle,
   algorithm: SignatureAlgorithm = measurementConsumerSigningKey.defaultAlgorithm
-): SignedData {
+): SignedMessage {
   return requisitionSpec.serializeAndSign(measurementConsumerSigningKey, algorithm)
 }
 
 /**
  * Encrypts a signed [RequisitionSpec].
  *
- * @param signedRequisitionSpec a [SignedData] containing a [RequisitionSpec]
+ * @param signedRequisitionSpec a [SignedMessage] containing a [RequisitionSpec]
  */
 fun encryptRequisitionSpec(
-  signedRequisitionSpec: SignedData,
+  signedRequisitionSpec: SignedMessage,
   measurementPublicKey: EncryptionPublicKey
-): ByteString {
+): EncryptedMessage {
   return measurementPublicKey
     .toPublicKeyHandle()
-    .hybridEncrypt(signedRequisitionSpec.toByteString())
+    .encryptMessage(ProtoAny.pack(signedRequisitionSpec))
 }
 
 /**
- * Signs [measurementSpec] into a [SignedData].
+ * Signs [measurementSpec] into a [SignedMessage].
  *
  * [measurementConsumerSigningKey] determines the algorithm type of the signature.
  */
@@ -77,7 +81,7 @@ fun signMeasurementSpec(
   measurementSpec: MeasurementSpec,
   measurementConsumerSigningKey: SigningKeyHandle,
   algorithm: SignatureAlgorithm = measurementConsumerSigningKey.defaultAlgorithm
-): SignedData {
+): SignedMessage {
   return measurementSpec.serializeAndSign(measurementConsumerSigningKey, algorithm)
 }
 
@@ -86,21 +90,22 @@ fun signEncryptionPublicKey(
   encryptionPublicKey: EncryptionPublicKey,
   signingKey: SigningKeyHandle,
   algorithm: SignatureAlgorithm = signingKey.defaultAlgorithm
-): SignedData {
+): SignedMessage {
   return encryptionPublicKey.serializeAndSign(signingKey, algorithm)
 }
 
 /**
  * Decrypts the encrypted signed [MeasurementResult].
  *
- * @param encryptedSignedDataResult an encrypted [SignedData] containing a [MeasurementResult].
+ * @param encryptedSignedMessageResult an encrypted [SignedMessage] containing a
+ *   [MeasurementResult].
  * @param measurementPrivateKey the encryption private key matching the Measurement public key.
  */
 fun decryptResult(
-  encryptedSignedDataResult: ByteString,
+  encryptedSignedMessageResult: EncryptedMessage,
   measurementPrivateKey: PrivateKeyHandle
-): SignedData {
-  return SignedData.parseFrom(measurementPrivateKey.hybridDecrypt(encryptedSignedDataResult))
+): SignedMessage {
+  return measurementPrivateKey.decryptMessage(encryptedSignedMessageResult)
 }
 
 /**
@@ -113,21 +118,21 @@ fun decryptResult(
  * @throws SignatureException if the signature is invalid
  */
 fun verifyResult(
-  signedResult: SignedData,
+  signedResult: SignedMessage,
   certificate: X509Certificate,
   trustedIssuer: X509Certificate
 ) {
   certificate.run {
     validate(trustedIssuer)
-    verifySignedData(signedResult)
+    verifySignedMessage(signedResult)
   }
 }
 
 /**
  * Verifies the EncryptionPublicKey from the DataProvider
  * 1. Validates the certificate path from [dataProviderCertificate] to [trustedIssuer]
- * 2. Verifies the [signature][SignedData.getSignature] of [signedEncryptionPublicKey] against its
- *    [data][SignedData.getData]
+ * 2. Verifies the [signature][SignedMessage.getSignature] of [signedEncryptionPublicKey] against
+ *    its [data][SignedMessage.getData]
  * 3. TODO: Check for replay attacks for [dataProviderCertificate]'s signature
  *
  * @throws CertPathValidatorException if [dataProviderCertificate] is invalid
@@ -135,18 +140,18 @@ fun verifyResult(
  */
 @Throws(CertPathValidatorException::class, SignatureException::class)
 fun verifyEncryptionPublicKey(
-  signedEncryptionPublicKey: SignedData,
+  signedEncryptionPublicKey: SignedMessage,
   dataProviderCertificate: X509Certificate,
   trustedIssuer: X509Certificate
 ) {
   dataProviderCertificate.run {
     validate(trustedIssuer)
-    verifySignedData(signedEncryptionPublicKey)
+    verifySignedMessage(signedEncryptionPublicKey)
   }
 }
 
 /** Decrypts an encrypted [Metadata]. */
 fun decryptMetadata(
-  encryptedMetadata: ByteString,
+  encryptedMetadata: EncryptedMessage,
   measurementConsumerPrivateKey: PrivateKeyHandle
-): Metadata = Metadata.parseFrom(measurementConsumerPrivateKey.hybridDecrypt(encryptedMetadata))
+): Metadata = measurementConsumerPrivateKey.decryptMessage(encryptedMetadata)
