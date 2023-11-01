@@ -16,6 +16,7 @@ package org.wfanet.measurement.consent.client.duchy
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
+import com.google.protobuf.any
 import com.google.protobuf.kotlin.toByteStringUtf8
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
@@ -27,12 +28,15 @@ import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
-import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.RequisitionSpec
+import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.api.v2alpha.copy
+import org.wfanet.measurement.api.v2alpha.encryptedMessage
 import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisition
-import org.wfanet.measurement.api.v2alpha.signedData
+import org.wfanet.measurement.api.v2alpha.signedMessage
 import org.wfanet.measurement.common.HexString
+import org.wfanet.measurement.common.ProtoReflection
 import org.wfanet.measurement.common.crypto.HashAlgorithm
 import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.SignatureAlgorithm
@@ -65,8 +69,11 @@ class DuchyClientTest {
   @Test
   fun `computeRequisitionFingerprint returns Requisition fingerprint`() {
     // Compute what Duchy would store from Kingdom data.
-    val encryptedRequisitionSpec = "Encrypted RequisitionSpec".toByteStringUtf8()
-    val requisitionSpecHash = Hashing.hashSha256(encryptedRequisitionSpec)
+    val encryptedRequisitionSpec = encryptedMessage {
+      ciphertext = "Encrypted RequisitionSpec".toByteStringUtf8()
+      typeUrl = ProtoReflection.getTypeUrl(RequisitionSpec.getDescriptor())
+    }
+    val requisitionSpecHash = Hashing.hashSha256(encryptedRequisitionSpec.ciphertext)
     val serializedMeasurementSpec = MEASUREMENT_SPEC.toByteString()
 
     val requisitionFingerprint =
@@ -77,7 +84,12 @@ class DuchyClientTest {
       .isEqualTo(
         computeRequisitionFingerprint(
           requisition {
-            measurementSpec = signedData { data = serializedMeasurementSpec }
+            measurementSpec = signedMessage {
+              message = any {
+                value = serializedMeasurementSpec
+                typeUrl = ProtoReflection.getTypeUrl(MEASUREMENT_SPEC.descriptorForType)
+              }
+            }
             this.encryptedRequisitionSpec = encryptedRequisitionSpec
           }
         )
@@ -173,7 +185,7 @@ class DuchyClientTest {
     assertThat(
         AGGREGATOR_SIGNING_KEY.certificate.verifySignature(
           AGGREGATOR_SIGNING_ALGORITHM,
-          signedResult.data,
+          signedResult.message.value,
           signedResult.signature
         )
       )
@@ -184,13 +196,10 @@ class DuchyClientTest {
   fun `duchy encrypt result`() {
     val measurementEncryptionKey = TinkPrivateKeyHandle.generateEcies()
     val measurementPublicKey = measurementEncryptionKey.publicKey.toEncryptionPublicKey()
-    val signedMeasurementResult =
-      SignedData.newBuilder()
-        .apply {
-          data = ByteString.copyFromUtf8("some measurement result")
-          signature = ByteString.copyFromUtf8("some measurement result signature")
-        }
-        .build()
+    val signedMeasurementResult = signedMessage {
+      message = any { value = ByteString.copyFromUtf8("some measurement result") }
+      signature = ByteString.copyFromUtf8("some measurement result signature")
+    }
 
     val encryptedSignedResult =
       encryptResult(
@@ -199,18 +208,20 @@ class DuchyClientTest {
       )
 
     val decryptedSignedResult =
-      SignedData.parseFrom(measurementEncryptionKey.hybridDecrypt(encryptedSignedResult))
+      SignedMessage.parseFrom(
+        measurementEncryptionKey.hybridDecrypt(encryptedSignedResult.ciphertext)
+      )
     assertThat(decryptedSignedResult).isEqualTo(signedMeasurementResult)
   }
 
   @Test
   fun `verifyElGamalPublicKey does not throw exception when signature is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData =
+    val signedElGamalPublicKey: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
 
     verifyElGamalPublicKey(
-      signedElGamalPublicKey.data,
+      signedElGamalPublicKey.message.value,
       signedElGamalPublicKey.signature,
       DUCHY_SIGNING_ALGORITHM,
       signingKeyHandle.certificate,
@@ -221,14 +232,14 @@ class DuchyClientTest {
   @Test
   fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData =
+    val signedElGamalPublicKey: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
     val incorrectIssuer = DUCHY_SIGNING_KEY.certificate
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
         verifyElGamalPublicKey(
-          signedElGamalPublicKey.data,
+          signedElGamalPublicKey.message.value,
           signedElGamalPublicKey.signature,
           DUCHY_SIGNING_ALGORITHM,
           signingKeyHandle.certificate,
@@ -241,14 +252,14 @@ class DuchyClientTest {
   @Test
   fun `verifyElGamalPublicKey throws when signature is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData =
+    val signedElGamalPublicKey: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
     val badSignature: ByteString =
       signedElGamalPublicKey.signature.concat("garbage".toByteStringUtf8())
 
     assertFailsWith<SignatureException> {
       verifyElGamalPublicKey(
-        signedElGamalPublicKey.data,
+        signedElGamalPublicKey.message.value,
         badSignature,
         DUCHY_SIGNING_ALGORITHM,
         signingKeyHandle.certificate,
