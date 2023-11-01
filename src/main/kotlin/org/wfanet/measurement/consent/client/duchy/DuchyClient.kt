@@ -20,15 +20,18 @@ import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.X509Certificate
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
+import org.wfanet.measurement.api.v2alpha.EncryptedMessage
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
-import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.common.crypto.Hashing
 import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.SigningKeyHandle
 import org.wfanet.measurement.common.crypto.validate
 import org.wfanet.measurement.common.crypto.verifySignature
+import org.wfanet.measurement.common.pack
+import org.wfanet.measurement.consent.client.common.encryptMessage
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toPublicKeyHandle
 
@@ -81,29 +84,29 @@ fun verifyDataProviderParticipation(
     computedNonceHashes.containsAll(measurementSpec.nonceHashesList)
 }
 
-/** Signs [measurementResult] into a [SignedData] using [aggregatorSigningKey]. */
+/** Signs [measurementResult] into a [SignedMessage] using [aggregatorSigningKey]. */
 fun signResult(
   measurementResult: Measurement.Result,
   aggregatorSigningKey: SigningKeyHandle,
   algorithm: SignatureAlgorithm = aggregatorSigningKey.defaultAlgorithm
-): SignedData {
+): SignedMessage {
   return measurementResult.serializeAndSign(aggregatorSigningKey, algorithm)
 }
 
 /** Encrypts the signed [Measurement.Result]. */
 fun encryptResult(
-  signedResult: SignedData,
+  signedResult: SignedMessage,
   measurementPublicKey: EncryptionPublicKey,
-): ByteString {
-  return measurementPublicKey.toPublicKeyHandle().hybridEncrypt(signedResult.toByteString())
+): EncryptedMessage {
+  return measurementPublicKey.toPublicKeyHandle().encryptMessage(signedResult.pack())
 }
 
-/** Signs [elGamalPublicKey] into a [SignedData] using [duchySigningKey]. */
+/** Signs [elGamalPublicKey] into a [SignedMessage] using [duchySigningKey]. */
 fun signElgamalPublicKey(
   elGamalPublicKey: ElGamalPublicKey,
   duchySigningKey: SigningKeyHandle,
   algorithm: SignatureAlgorithm = duchySigningKey.defaultAlgorithm
-): SignedData {
+): SignedMessage {
   return elGamalPublicKey.serializeAndSign(duchySigningKey, algorithm)
 }
 
