@@ -16,7 +16,9 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
+import com.google.protobuf.copy
 import com.google.protobuf.kotlin.toByteStringUtf8
+import com.google.protobuf.kotlin.unpack
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.PKIXReason
@@ -25,12 +27,13 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
+import org.wfanet.measurement.api.v2alpha.EncryptedMessage
 import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroupKt.metadata
 import org.wfanet.measurement.api.v2alpha.MeasurementKt.ResultKt.reach
 import org.wfanet.measurement.api.v2alpha.MeasurementKt.result
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
-import org.wfanet.measurement.api.v2alpha.SignedData
+import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.measurementSpec
 import org.wfanet.measurement.api.v2alpha.requisitionSpec
@@ -39,11 +42,13 @@ import org.wfanet.measurement.common.crypto.HashAlgorithm
 import org.wfanet.measurement.common.crypto.SignatureAlgorithm
 import org.wfanet.measurement.common.crypto.readCertificate
 import org.wfanet.measurement.common.crypto.tink.TinkPrivateKeyHandle
+import org.wfanet.measurement.common.pack
 import org.wfanet.measurement.consent.client.common.NonceMismatchException
 import org.wfanet.measurement.consent.client.common.PublicKeyMismatchException
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.measurementconsumer.decryptMetadata
+import org.wfanet.measurement.consent.client.measurementconsumer.decryptResult
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
 import org.wfanet.measurement.consent.client.measurementconsumer.signRequisitionSpec
 import org.wfanet.measurement.consent.client.measurementconsumer.verifyResult
@@ -67,12 +72,12 @@ private val MEASUREMENT_PUBLIC_KEY =
     .build()
 
 private val FAKE_MEASUREMENT_SPEC = measurementSpec {
-  measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
+  measurementPublicKey = MEASUREMENT_PUBLIC_KEY.pack()
   nonceHashes += NONCE_HASH.bytes
 }
 
 private val FAKE_REQUISITION_SPEC = requisitionSpec {
-  measurementPublicKey = MEASUREMENT_PUBLIC_KEY.toByteString()
+  measurementPublicKey = MEASUREMENT_PUBLIC_KEY.pack()
   nonce = NONCE
 }
 
@@ -89,7 +94,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyMeasurementSpec does not throw when signed MeasurementSpec is valid`() {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData =
+    val signedMeasurementSpec: SignedMessage =
       FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     verifyMeasurementSpec(signedMeasurementSpec, signingKeyHandle.certificate, MC_TRUSTED_ISSUER)
@@ -98,7 +103,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyMeasurementSpec throws when signature is invalid`() {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData =
+    val signedMeasurementSpec: SignedMessage =
       FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM).copy {
         signature = signature.concat("garbage".toByteStringUtf8())
       }
@@ -111,7 +116,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyMeasurementSpec throws when certificate path is invalid`() {
     val signingKeyHandle = MC_SIGNING_KEY
-    val signedMeasurementSpec: SignedData =
+    val signedMeasurementSpec: SignedMessage =
       FAKE_MEASUREMENT_SPEC.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     val exception =
@@ -127,25 +132,23 @@ class DataProviderClientTest {
 
   @Test
   fun `decryptRequisitionSpec returns decrypted RequisitionSpec`() {
-    // Encrypt a RequisitionSpec (as SignedData) using the Measurement Consumer Functions
-    val signedRequisitionSpec =
+    // Encrypt a RequisitionSpec (as SignedMessage) using the Measurement Consumer Functions
+    val signedRequisitionSpec: SignedMessage =
       signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
-    val encryptedRequisitionSpec =
+    val encryptedRequisitionSpec: EncryptedMessage =
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
         measurementPublicKey = EDP_PUBLIC_KEY
       )
 
-    // Decrypt the SignedData RequisitionSpec
-    val decryptedSignedDataRequisitionSpec: SignedData =
-      decryptRequisitionSpec(encryptedRequisitionSpec, EDP_PRIVATE_KEY)
-    val decryptedRequisitionSpec =
-      RequisitionSpec.parseFrom(decryptedSignedDataRequisitionSpec.data)
+    // Decrypt the SignedMessage RequisitionSpec
+    val result: SignedMessage = decryptRequisitionSpec(encryptedRequisitionSpec, EDP_PRIVATE_KEY)
 
-    assertThat(signedRequisitionSpec).isEqualTo(decryptedSignedDataRequisitionSpec)
+    val requisitionSpec: RequisitionSpec = result.message.unpack()
+    assertThat(signedRequisitionSpec).isEqualTo(result)
     verifyRequisitionSpec(
       signedRequisitionSpec,
-      decryptedRequisitionSpec,
+      requisitionSpec,
       FAKE_MEASUREMENT_SPEC,
       MC_SIGNING_KEY.certificate,
       MC_TRUSTED_ISSUER
@@ -189,7 +192,8 @@ class DataProviderClientTest {
       signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
     val measurementSpec =
       FAKE_MEASUREMENT_SPEC.copy {
-        measurementPublicKey = measurementPublicKey.concat("garbage".toByteStringUtf8())
+        measurementPublicKey =
+          measurementPublicKey.copy { value = value.concat("garbage".toByteStringUtf8()) }
       }
 
     assertFailsWith<PublicKeyMismatchException> {
@@ -242,7 +246,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyElGamalPublicKey does not throw when signed key is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData =
+    val signedElGamalPublicKey: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     verifyElGamalPublicKey(
@@ -255,7 +259,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyElGamalPublicKey throws when signature is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData =
+    val signedElGamalPublicKey: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM).copy {
         signature = signature.concat("garbage".toByteStringUtf8())
       }
@@ -272,7 +276,7 @@ class DataProviderClientTest {
   @Test
   fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
-    val signedElGamalPublicKey: SignedData =
+    val signedElGamalPublicKey: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
 
     val exception =
@@ -303,6 +307,17 @@ class DataProviderClientTest {
 
     val metadata = decryptMetadata(encryptedMetadata, MC_PRIVATE_KEY)
     assertThat(metadata).isEqualTo(FAKE_EVENT_GROUP_METADATA)
+  }
+
+  @Test
+  fun `encryptResult returns encrypted Result`() {
+    val signedResult: SignedMessage =
+      signResult(FAKE_MEASUREMENT_RESULT, EDP_SIGNING_KEY, EDP_SIGNING_ALGORITHM)
+
+    val encryptedResult: EncryptedMessage = encryptResult(signedResult, MC_PUBLIC_KEY)
+
+    val decryptedResult = decryptResult(encryptedResult, MC_PRIVATE_KEY)
+    assertThat(decryptedResult).isEqualTo(signedResult)
   }
 
   companion object {
