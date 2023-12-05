@@ -1,0 +1,21 @@
+module(
+    name = "consent_signaling_client",
+)
+
+bazel_dep(
+    name = "rules_kotlin_jvm",
+    repo_name = "wfa_rules_kotlin_jvm",
+    version = "0.1.0-rc1",
+)
+
+bazel_dep(
+    name = "cross_media_measurement_api",
+    repo_name = "wfa_measurement_proto",
+    version = "0.54.0-rc1",
+)
+
+bazel_dep(
+    name = "common_jvm",
+    repo_name = "wfa_common_jvm",
+    version = "0.71.0-rc1",
+)
