@@ -34,6 +34,10 @@ jobs:
         mkdir -p ~/.local/bin
         bazelisk_path="$(which bazelisk)"
         ln -s "${bazelisk_path}" ~/.local/bin/bazel
+        
+    - name: Write ~/.bazelrc
+      run: |
+        echo 'common --config=ci' >> ~/.bazelrc
 
     - name: Get Bazel cache params
       id: get-cache-params
