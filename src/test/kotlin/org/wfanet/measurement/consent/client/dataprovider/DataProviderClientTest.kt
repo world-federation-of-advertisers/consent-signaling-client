@@ -16,9 +16,12 @@ package org.wfanet.measurement.consent.client.dataprovider
 
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
+import com.google.protobuf.any
 import com.google.protobuf.copy
+import com.google.protobuf.kotlin.toByteString
 import com.google.protobuf.kotlin.toByteStringUtf8
 import com.google.protobuf.kotlin.unpack
+import java.security.SecureRandom
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.PKIXReason
@@ -36,7 +39,9 @@ import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.measurementSpec
+import org.wfanet.measurement.api.v2alpha.randomSeed
 import org.wfanet.measurement.api.v2alpha.requisitionSpec
+import org.wfanet.measurement.api.v2alpha.signedMessage
 import org.wfanet.measurement.common.HexString
 import org.wfanet.measurement.common.crypto.HashAlgorithm
 import org.wfanet.measurement.common.crypto.SignatureAlgorithm
@@ -47,6 +52,7 @@ import org.wfanet.measurement.consent.client.common.NonceMismatchException
 import org.wfanet.measurement.consent.client.common.PublicKeyMismatchException
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
+import org.wfanet.measurement.consent.client.duchy.verifyRandomSeed
 import org.wfanet.measurement.consent.client.measurementconsumer.decryptMetadata
 import org.wfanet.measurement.consent.client.measurementconsumer.decryptResult
 import org.wfanet.measurement.consent.client.measurementconsumer.encryptRequisitionSpec
@@ -89,6 +95,11 @@ private val FAKE_EVENT_GROUP_METADATA = metadata {
   eventGroupMetadataDescriptor = "fake descriptor"
 }
 
+private const val RANDOM_SEED_LENGTH_IN_BYTES = 48
+private val RANDOM_SEED = randomSeed {
+  data = SecureRandom().generateSeed(RANDOM_SEED_LENGTH_IN_BYTES).toByteString()
+}
+
 @RunWith(JUnit4::class)
 class DataProviderClientTest {
   @Test
@@ -124,7 +135,7 @@ class DataProviderClientTest {
         verifyMeasurementSpec(
           signedMeasurementSpec,
           signingKeyHandle.certificate,
-          EDP_TRUSTED_ISSUER
+          EDP_TRUSTED_ISSUER,
         )
       }
     assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
@@ -138,7 +149,7 @@ class DataProviderClientTest {
     val encryptedRequisitionSpec: EncryptedMessage =
       encryptRequisitionSpec(
         signedRequisitionSpec = signedRequisitionSpec,
-        measurementPublicKey = EDP_PUBLIC_KEY
+        measurementPublicKey = EDP_PUBLIC_KEY,
       )
 
     // Decrypt the SignedMessage RequisitionSpec
@@ -151,7 +162,7 @@ class DataProviderClientTest {
       requisitionSpec,
       FAKE_MEASUREMENT_SPEC,
       MC_SIGNING_KEY.certificate,
-      MC_TRUSTED_ISSUER
+      MC_TRUSTED_ISSUER,
     )
   }
 
@@ -165,7 +176,7 @@ class DataProviderClientTest {
       FAKE_REQUISITION_SPEC,
       FAKE_MEASUREMENT_SPEC,
       MC_SIGNING_KEY.certificate,
-      MC_TRUSTED_ISSUER
+      MC_TRUSTED_ISSUER,
     )
   }
 
@@ -181,7 +192,7 @@ class DataProviderClientTest {
         FAKE_REQUISITION_SPEC,
         measurementSpec,
         MC_SIGNING_KEY.certificate,
-        MC_TRUSTED_ISSUER
+        MC_TRUSTED_ISSUER,
       )
     }
   }
@@ -202,7 +213,7 @@ class DataProviderClientTest {
         FAKE_REQUISITION_SPEC,
         measurementSpec,
         MC_SIGNING_KEY.certificate,
-        MC_TRUSTED_ISSUER
+        MC_TRUSTED_ISSUER,
       )
     }
   }
@@ -220,7 +231,7 @@ class DataProviderClientTest {
         FAKE_REQUISITION_SPEC,
         FAKE_MEASUREMENT_SPEC,
         MC_SIGNING_KEY.certificate,
-        MC_TRUSTED_ISSUER
+        MC_TRUSTED_ISSUER,
       )
     }
   }
@@ -237,7 +248,7 @@ class DataProviderClientTest {
           FAKE_REQUISITION_SPEC,
           FAKE_MEASUREMENT_SPEC,
           MC_SIGNING_KEY.certificate,
-          EDP_TRUSTED_ISSUER
+          EDP_TRUSTED_ISSUER,
         )
       }
     assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
@@ -252,7 +263,7 @@ class DataProviderClientTest {
     verifyElGamalPublicKey(
       signedElGamalPublicKey,
       signingKeyHandle.certificate,
-      DUCHY_TRUSTED_ISSUER
+      DUCHY_TRUSTED_ISSUER,
     )
   }
 
@@ -268,7 +279,7 @@ class DataProviderClientTest {
       verifyElGamalPublicKey(
         signedElGamalPublicKey,
         signingKeyHandle.certificate,
-        DUCHY_TRUSTED_ISSUER
+        DUCHY_TRUSTED_ISSUER,
       )
     }
   }
@@ -284,7 +295,7 @@ class DataProviderClientTest {
         verifyElGamalPublicKey(
           signedElGamalPublicKey,
           signingKeyHandle.certificate,
-          MC_TRUSTED_ISSUER
+          MC_TRUSTED_ISSUER,
         )
       }
     assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
@@ -302,7 +313,7 @@ class DataProviderClientTest {
     val encryptedMetadata =
       encryptMetadata(
         metadata = FAKE_EVENT_GROUP_METADATA,
-        measurementConsumerPublicKey = MC_PUBLIC_KEY
+        measurementConsumerPublicKey = MC_PUBLIC_KEY,
       )
 
     val metadata = decryptMetadata(encryptedMetadata, MC_PRIVATE_KEY)
@@ -320,12 +331,35 @@ class DataProviderClientTest {
     assertThat(decryptedResult).isEqualTo(signedResult)
   }
 
+  @Test
+  fun `signRandomSeed returns signed RandomSeed`() {
+    val signedRandomSeed = signRandomSeed(RANDOM_SEED, EDP_SIGNING_KEY, EDP_SIGNING_ALGORITHM)
+
+    verifyRandomSeed(signedRandomSeed, EDP_SIGNING_KEY.certificate, EDP_TRUSTED_ISSUER)
+  }
+
+  @Test
+  fun `encryptRandomSeed returns encrypted data`() {
+    val duchyPrivateKey = TinkPrivateKeyHandle.generateHpke()
+    val duchyPublicKey = duchyPrivateKey.publicKey.toEncryptionPublicKey()
+    val signedRandomSeed = signedMessage {
+      message = any { value = ByteString.copyFromUtf8("a random seed") }
+      signature = ByteString.copyFromUtf8("a random seed signature")
+    }
+
+    val encryptedSignedRandomSeed = encryptRandomSeed(signedRandomSeed, duchyPublicKey)
+
+    val decryptedSignedRandomSeed =
+      SignedMessage.parseFrom(duchyPrivateKey.hybridDecrypt(encryptedSignedRandomSeed.ciphertext))
+    assertThat(decryptedSignedRandomSeed).isEqualTo(signedRandomSeed)
+  }
+
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
     private val MC_SIGNING_ALGORITHM =
       SignatureAlgorithm.fromKeyAndHashAlgorithm(
         MC_SIGNING_KEY.certificate.publicKey,
-        HashAlgorithm.SHA256
+        HashAlgorithm.SHA256,
       )!!
     private val MC_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
     private val MC_PUBLIC_KEY = MC_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
@@ -339,7 +373,7 @@ class DataProviderClientTest {
     private val EDP_SIGNING_ALGORITHM =
       SignatureAlgorithm.fromKeyAndHashAlgorithm(
         EDP_SIGNING_KEY.certificate.publicKey,
-        HashAlgorithm.SHA256
+        HashAlgorithm.SHA256,
       )!!
     private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
     private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
