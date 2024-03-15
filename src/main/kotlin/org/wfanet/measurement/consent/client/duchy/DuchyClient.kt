@@ -139,6 +139,15 @@ fun verifyElGamalPublicKey(
   }
 }
 
+/** Signs the Duchy's encryptionPublicKey. */
+fun signEncryptionPublicKey(
+  encryptionPublicKey: EncryptionPublicKey,
+  signingKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = signingKey.defaultAlgorithm,
+): SignedMessage {
+  return encryptionPublicKey.serializeAndSign(signingKey, algorithm)
+}
+
 /** Decrypt the encrypted signed [RandomSeed] */
 fun decryptRandomSeed(
   encryptedSignedRandomSeed: EncryptedMessage,
@@ -148,7 +157,7 @@ fun decryptRandomSeed(
 }
 
 /**
- * Verifies a [RandomSeed] from a DataProvider bypassing from a Duchy.
+ * Verifies a [RandomSeed] from a DataProvider passed through another Duchy.
  * 1. Validates [certificate] against [trustedIssuer]
  * 2. Verifies the [signedRandomSeed] data against the [signedRandomSeed] signature
  *

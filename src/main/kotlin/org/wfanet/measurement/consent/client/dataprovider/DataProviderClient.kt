@@ -175,3 +175,23 @@ fun signRandomSeed(
 /** Encrypts a signed [RandomSeed]. */
 fun encryptRandomSeed(signedRandomSeed: SignedMessage, duchyPublicKey: EncryptionPublicKey) =
   duchyPublicKey.toPublicKeyHandle().encryptMessage(signedRandomSeed.pack())
+
+/**
+ * Verifies the [signeEncryptionPublicKey] from a Duchy.
+ * 1. Validates the certificate path from [duchyCertificate] to [trustedDuchyIssuer]
+ * 2. Verifies the [signeEncryptionPublicKey] [signature][SignedMessage.getSignature]
+ * 3. TODO: Check for replay attacks for the signature
+ *
+ * @throws CertPathValidatorException if [duchyCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
+ */
+fun verifyEncryptionPublicKey(
+  signeEncryptionPublicKey: SignedMessage,
+  duchyCertificate: X509Certificate,
+  trustedDuchyIssuer: X509Certificate,
+) {
+  duchyCertificate.run {
+    validate(trustedDuchyIssuer)
+    verifySignedMessage(signeEncryptionPublicKey)
+  }
+}
