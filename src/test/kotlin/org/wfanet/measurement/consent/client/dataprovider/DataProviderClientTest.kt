@@ -89,6 +89,8 @@ private val FAKE_REQUISITION_SPEC = requisitionSpec {
 
 private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
 
+private val FAKE_ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+
 private val FAKE_MEASUREMENT_RESULT = result { reach = reach { value = 100 } }
 
 private val FAKE_EVENT_GROUP_METADATA = metadata {
@@ -258,7 +260,7 @@ class DataProviderClientTest {
   fun `verifyElGamalPublicKey does not throw when signed key is valid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedMessage =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
 
     verifyElGamalPublicKey(
       signedElGamalPublicKey,
@@ -271,7 +273,7 @@ class DataProviderClientTest {
   fun `verifyElGamalPublicKey throws when signature is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedMessage =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM).copy {
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM).copy {
         signature = signature.concat("garbage".toByteStringUtf8())
       }
 
@@ -288,7 +290,7 @@ class DataProviderClientTest {
   fun `verifyElGamalPublicKey throws when certificate path is invalid`() {
     val signingKeyHandle = DUCHY_SIGNING_KEY
     val signedElGamalPublicKey: SignedMessage =
-      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, MC_SIGNING_ALGORITHM)
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
@@ -354,6 +356,53 @@ class DataProviderClientTest {
     assertThat(decryptedSignedRandomSeed).isEqualTo(signedRandomSeed)
   }
 
+  @Test
+  fun `verifyEncryptionPublicKey does not throw when signature is valid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedEncryptionPublicKey: SignedMessage =
+      FAKE_ENCRYPTION_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
+
+    verifyEncryptionPublicKey(
+      signedEncryptionPublicKey,
+      signingKeyHandle.certificate,
+      DUCHY_TRUSTED_ISSUER,
+    )
+  }
+
+  @Test
+  fun `verifyEncryptionPublicKey throws when signature is invalid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedEncryptionPublicKey: SignedMessage =
+      FAKE_ENCRYPTION_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM).copy {
+        signature = signature.concat("garbage".toByteStringUtf8())
+      }
+
+    assertFailsWith<SignatureException> {
+      verifyEncryptionPublicKey(
+        signedEncryptionPublicKey,
+        signingKeyHandle.certificate,
+        DUCHY_TRUSTED_ISSUER,
+      )
+    }
+  }
+
+  @Test
+  fun `verifyEncryptionPublicKey throws when certificate path is invalid`() {
+    val signingKeyHandle = DUCHY_SIGNING_KEY
+    val signedEncryptionPublicKey: SignedMessage =
+      FAKE_ENCRYPTION_PUBLIC_KEY.serializeAndSign(signingKeyHandle, DUCHY_SIGNING_ALGORITHM)
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyElGamalPublicKey(
+          signedEncryptionPublicKey,
+          signingKeyHandle.certificate,
+          MC_TRUSTED_ISSUER,
+        )
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
   companion object {
     private val MC_SIGNING_KEY = readSigningKeyHandle(MC_1_CERT_PEM_FILE, MC_1_KEY_FILE)
     private val MC_SIGNING_ALGORITHM =
@@ -367,6 +416,11 @@ class DataProviderClientTest {
 
     private val DUCHY_SIGNING_KEY =
       readSigningKeyHandle(DUCHY_1_NON_AGG_CERT_PEM_FILE, DUCHY_1_NON_AGG_KEY_FILE)
+    private val DUCHY_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        DUCHY_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256,
+      )!!
     private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
 
     private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)

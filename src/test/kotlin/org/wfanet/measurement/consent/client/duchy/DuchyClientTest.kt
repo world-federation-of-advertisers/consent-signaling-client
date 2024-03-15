@@ -29,6 +29,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
+import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedMessage
@@ -50,7 +51,7 @@ import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.dataprovider.computeRequisitionFingerprint
 import org.wfanet.measurement.consent.client.dataprovider.encryptRandomSeed
-import org.wfanet.measurement.consent.client.dataprovider.signRandomSeed
+import org.wfanet.measurement.consent.client.dataprovider.verifyEncryptionPublicKey
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
@@ -71,6 +72,8 @@ private val NONCE_2_HASH =
 private val MEASUREMENT_SPEC = measurementSpec { nonceHashes += NONCE_HASH.bytes }
 
 private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
+
+private val FAKE_ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
 
 private const val RANDOM_SEED_LENGTH_IN_BYTES = 48
 private val RANDOM_SEED = randomSeed {
@@ -299,9 +302,64 @@ class DuchyClientTest {
 
   @Test
   fun `verifyRandomSeed verifies a signed randomSeed`() {
-    val signedRandomSeed = signRandomSeed(RANDOM_SEED, EDP_SIGNING_KEY, EDP_SIGNING_ALGORITHM)
+    val signingKeyHandle = EDP_SIGNING_KEY
+    val signedRandomSeed = RANDOM_SEED.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
 
-    verifyRandomSeed(signedRandomSeed, EDP_SIGNING_KEY.certificate, EDP_TRUSTED_ISSUER)
+    verifyRandomSeed(signedRandomSeed, signingKeyHandle.certificate, EDP_TRUSTED_ISSUER)
+  }
+
+  @Test
+  fun `verifyRandomSeed throws when certificate path is invalid`() {
+    val signingKeyHandle = EDP_SIGNING_KEY
+    val signedRandomSeed: SignedMessage =
+      RANDOM_SEED.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
+    val incorrectIssuer = DUCHY_SIGNING_KEY.certificate
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyElGamalPublicKey(
+          signedRandomSeed.message.value,
+          signedRandomSeed.signature,
+          EDP_SIGNING_ALGORITHM,
+          signingKeyHandle.certificate,
+          incorrectIssuer,
+        )
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
+  @Test
+  fun `verifyRandomSeed throws when signature is invalid`() {
+    val signingKeyHandle = EDP_SIGNING_KEY
+    val signedRandomSeed: SignedMessage =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
+    val badSignature: ByteString = signedRandomSeed.signature.concat("garbage".toByteStringUtf8())
+
+    assertFailsWith<SignatureException> {
+      verifyElGamalPublicKey(
+        signedRandomSeed.message.value,
+        badSignature,
+        EDP_SIGNING_ALGORITHM,
+        signingKeyHandle.certificate,
+        EDP_TRUSTED_ISSUER,
+      )
+    }
+  }
+
+  @Test
+  fun `signEncryptionPublicKey returns signed message`() {
+    val signedEncryptionPublicKey =
+      signEncryptionPublicKey(
+        FAKE_ENCRYPTION_PUBLIC_KEY,
+        DUCHY_SIGNING_KEY,
+        DUCHY_SIGNING_ALGORITHM,
+      )
+
+    verifyEncryptionPublicKey(
+      signedEncryptionPublicKey,
+      DUCHY_SIGNING_KEY.certificate,
+      DUCHY_TRUSTED_ISSUER,
+    )
   }
 
   companion object {

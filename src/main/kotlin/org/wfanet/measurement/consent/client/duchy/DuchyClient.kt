@@ -139,6 +139,15 @@ fun verifyElGamalPublicKey(
   }
 }
 
+/** Signs the Duchy's encryptionPublicKey. */
+fun signEncryptionPublicKey(
+  encryptionPublicKey: EncryptionPublicKey,
+  signingKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = signingKey.defaultAlgorithm,
+): SignedMessage {
+  return encryptionPublicKey.serializeAndSign(signingKey, algorithm)
+}
+
 /** Decrypt the encrypted signed [RandomSeed] */
 fun decryptRandomSeed(
   encryptedSignedRandomSeed: EncryptedMessage,
