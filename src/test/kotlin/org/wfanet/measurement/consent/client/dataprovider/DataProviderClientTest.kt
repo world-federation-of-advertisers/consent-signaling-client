@@ -394,7 +394,7 @@ class DataProviderClientTest {
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
-        verifyElGamalPublicKey(
+        verifyEncryptionPublicKey(
           signedEncryptionPublicKey,
           signingKeyHandle.certificate,
           MC_TRUSTED_ISSUER,

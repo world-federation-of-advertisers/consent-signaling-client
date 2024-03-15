@@ -317,13 +317,7 @@ class DuchyClientTest {
 
     val exception =
       assertFailsWith<CertPathValidatorException> {
-        verifyElGamalPublicKey(
-          signedRandomSeed.message.value,
-          signedRandomSeed.signature,
-          EDP_SIGNING_ALGORITHM,
-          signingKeyHandle.certificate,
-          incorrectIssuer,
-        )
+        verifyRandomSeed(signedRandomSeed, signingKeyHandle.certificate, incorrectIssuer)
       }
     assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
   }
@@ -333,16 +327,11 @@ class DuchyClientTest {
     val signingKeyHandle = EDP_SIGNING_KEY
     val signedRandomSeed: SignedMessage =
       FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
-    val badSignature: ByteString = signedRandomSeed.signature.concat("garbage".toByteStringUtf8())
+    val badSignature =
+      signedRandomSeed.copy { signature = signature.concat("garbage".toByteStringUtf8()) }
 
     assertFailsWith<SignatureException> {
-      verifyElGamalPublicKey(
-        signedRandomSeed.message.value,
-        badSignature,
-        EDP_SIGNING_ALGORITHM,
-        signingKeyHandle.certificate,
-        EDP_TRUSTED_ISSUER,
-      )
+      verifyRandomSeed(badSignature, signingKeyHandle.certificate, EDP_TRUSTED_ISSUER)
     }
   }
 
