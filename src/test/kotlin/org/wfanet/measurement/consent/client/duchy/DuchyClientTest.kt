@@ -292,11 +292,10 @@ class DuchyClientTest {
       message = any { value = ByteString.copyFromUtf8("a random seed") }
       signature = ByteString.copyFromUtf8("a random seed signature")
     }
-
     val encryptedSignedRandomSeed = encryptRandomSeed(signedRandomSeed, duchyPublicKey)
 
-    val decryptedSignedRandomSeed =
-      SignedMessage.parseFrom(duchyPrivateKey.hybridDecrypt(encryptedSignedRandomSeed.ciphertext))
+    val decryptedSignedRandomSeed = decryptRandomSeed(encryptedSignedRandomSeed, duchyPrivateKey)
+
     assertThat(decryptedSignedRandomSeed).isEqualTo(signedRandomSeed)
   }
 
