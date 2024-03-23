@@ -17,7 +17,9 @@ package org.wfanet.measurement.consent.client.duchy
 import com.google.common.truth.Truth.assertThat
 import com.google.protobuf.ByteString
 import com.google.protobuf.any
+import com.google.protobuf.kotlin.toByteString
 import com.google.protobuf.kotlin.toByteStringUtf8
+import java.security.SecureRandom
 import java.security.SignatureException
 import java.security.cert.CertPathValidatorException
 import java.security.cert.PKIXReason
@@ -27,12 +29,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.wfanet.measurement.api.v2alpha.ElGamalPublicKey
+import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.Measurement.Result as MeasurementResult
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedMessage
 import org.wfanet.measurement.api.v2alpha.copy
 import org.wfanet.measurement.api.v2alpha.encryptedMessage
 import org.wfanet.measurement.api.v2alpha.measurementSpec
+import org.wfanet.measurement.api.v2alpha.randomSeed
 import org.wfanet.measurement.api.v2alpha.requisition
 import org.wfanet.measurement.api.v2alpha.signedMessage
 import org.wfanet.measurement.common.HexString
@@ -46,11 +50,16 @@ import org.wfanet.measurement.common.crypto.verifySignature
 import org.wfanet.measurement.consent.client.common.serializeAndSign
 import org.wfanet.measurement.consent.client.common.toEncryptionPublicKey
 import org.wfanet.measurement.consent.client.dataprovider.computeRequisitionFingerprint
+import org.wfanet.measurement.consent.client.dataprovider.encryptRandomSeed
+import org.wfanet.measurement.consent.client.dataprovider.verifyEncryptionPublicKey
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_KEY_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.DUCHY_AGG_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_CERT_PEM_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_KEY_FILE
+import org.wfanet.measurement.consent.testing.EDP_1_ROOT_CERT_PEM_FILE
 import org.wfanet.measurement.consent.testing.readSigningKeyHandle
 
 private const val NONCE = -7452112597811743614L // Hex: 9894C7134537B482
@@ -63,6 +72,13 @@ private val NONCE_2_HASH =
 private val MEASUREMENT_SPEC = measurementSpec { nonceHashes += NONCE_HASH.bytes }
 
 private val FAKE_EL_GAMAL_PUBLIC_KEY = ElGamalPublicKey.getDefaultInstance()
+
+private val FAKE_ENCRYPTION_PUBLIC_KEY = EncryptionPublicKey.getDefaultInstance()
+
+private const val RANDOM_SEED_LENGTH_IN_BYTES = 48
+private val RANDOM_SEED = randomSeed {
+  data = SecureRandom().generateSeed(RANDOM_SEED_LENGTH_IN_BYTES).toByteString()
+}
 
 @RunWith(JUnit4::class)
 class DuchyClientTest {
@@ -111,7 +127,7 @@ class DuchyClientTest {
           measurementSpec = MEASUREMENT_SPEC,
           requisition = requisition,
           requisitionFingerprint = requisitionFingerprint,
-          nonce = NONCE
+          nonce = NONCE,
         )
       )
       .isTrue()
@@ -132,7 +148,7 @@ class DuchyClientTest {
           measurementSpec = MEASUREMENT_SPEC,
           requisition = requisition,
           requisitionFingerprint = requisitionFingerprint,
-          nonce = 404L
+          nonce = 404L,
         )
       )
       .isFalse()
@@ -143,7 +159,7 @@ class DuchyClientTest {
     assertThat(
         verifyDataProviderParticipation(
           MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
-          listOf(NONCE, NONCE_2)
+          listOf(NONCE, NONCE_2),
         )
       )
       .isTrue()
@@ -154,7 +170,7 @@ class DuchyClientTest {
     assertThat(
         verifyDataProviderParticipation(
           MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
-          listOf(NONCE)
+          listOf(NONCE),
         )
       )
       .isFalse()
@@ -165,7 +181,7 @@ class DuchyClientTest {
     assertThat(
         verifyDataProviderParticipation(
           MEASUREMENT_SPEC.copy { nonceHashes += NONCE_2_HASH.bytes },
-          listOf(NONCE, 404L)
+          listOf(NONCE, 404L),
         )
       )
       .isFalse()
@@ -186,7 +202,7 @@ class DuchyClientTest {
         AGGREGATOR_SIGNING_KEY.certificate.verifySignature(
           AGGREGATOR_SIGNING_ALGORITHM,
           signedResult.message.value,
-          signedResult.signature
+          signedResult.signature,
         )
       )
       .isTrue()
@@ -204,7 +220,7 @@ class DuchyClientTest {
     val encryptedSignedResult =
       encryptResult(
         signedResult = signedMeasurementResult,
-        measurementPublicKey = measurementPublicKey
+        measurementPublicKey = measurementPublicKey,
       )
 
     val decryptedSignedResult =
@@ -225,7 +241,7 @@ class DuchyClientTest {
       signedElGamalPublicKey.signature,
       DUCHY_SIGNING_ALGORITHM,
       signingKeyHandle.certificate,
-      DUCHY_TRUSTED_ISSUER
+      DUCHY_TRUSTED_ISSUER,
     )
   }
 
@@ -243,7 +259,7 @@ class DuchyClientTest {
           signedElGamalPublicKey.signature,
           DUCHY_SIGNING_ALGORITHM,
           signingKeyHandle.certificate,
-          incorrectIssuer
+          incorrectIssuer,
         )
       }
     assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
@@ -263,9 +279,75 @@ class DuchyClientTest {
         badSignature,
         DUCHY_SIGNING_ALGORITHM,
         signingKeyHandle.certificate,
-        DUCHY_TRUSTED_ISSUER
+        DUCHY_TRUSTED_ISSUER,
       )
     }
+  }
+
+  @Test
+  fun `decryptRandomSeed returns the RandomSeed`() {
+    val duchyPrivateKey = TinkPrivateKeyHandle.generateHpke()
+    val duchyPublicKey = duchyPrivateKey.publicKey.toEncryptionPublicKey()
+    val signedRandomSeed = signedMessage {
+      message = any { value = ByteString.copyFromUtf8("a random seed") }
+      signature = ByteString.copyFromUtf8("a random seed signature")
+    }
+    val encryptedSignedRandomSeed = encryptRandomSeed(signedRandomSeed, duchyPublicKey)
+
+    val decryptedSignedRandomSeed = decryptRandomSeed(encryptedSignedRandomSeed, duchyPrivateKey)
+
+    assertThat(decryptedSignedRandomSeed).isEqualTo(signedRandomSeed)
+  }
+
+  @Test
+  fun `verifyRandomSeed verifies a signed randomSeed`() {
+    val signingKeyHandle = EDP_SIGNING_KEY
+    val signedRandomSeed = RANDOM_SEED.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
+
+    verifyRandomSeed(signedRandomSeed, signingKeyHandle.certificate, EDP_TRUSTED_ISSUER)
+  }
+
+  @Test
+  fun `verifyRandomSeed throws when certificate path is invalid`() {
+    val signingKeyHandle = EDP_SIGNING_KEY
+    val signedRandomSeed: SignedMessage =
+      RANDOM_SEED.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
+    val incorrectIssuer = DUCHY_SIGNING_KEY.certificate
+
+    val exception =
+      assertFailsWith<CertPathValidatorException> {
+        verifyRandomSeed(signedRandomSeed, signingKeyHandle.certificate, incorrectIssuer)
+      }
+    assertThat(exception.reason).isEqualTo(PKIXReason.NO_TRUST_ANCHOR)
+  }
+
+  @Test
+  fun `verifyRandomSeed throws when signature is invalid`() {
+    val signingKeyHandle = EDP_SIGNING_KEY
+    val signedRandomSeed: SignedMessage =
+      FAKE_EL_GAMAL_PUBLIC_KEY.serializeAndSign(signingKeyHandle, EDP_SIGNING_ALGORITHM)
+    val badSignature =
+      signedRandomSeed.copy { signature = signature.concat("garbage".toByteStringUtf8()) }
+
+    assertFailsWith<SignatureException> {
+      verifyRandomSeed(badSignature, signingKeyHandle.certificate, EDP_TRUSTED_ISSUER)
+    }
+  }
+
+  @Test
+  fun `signEncryptionPublicKey returns signed message`() {
+    val signedEncryptionPublicKey =
+      signEncryptionPublicKey(
+        FAKE_ENCRYPTION_PUBLIC_KEY,
+        DUCHY_SIGNING_KEY,
+        DUCHY_SIGNING_ALGORITHM,
+      )
+
+    verifyEncryptionPublicKey(
+      signedEncryptionPublicKey,
+      DUCHY_SIGNING_KEY.certificate,
+      DUCHY_TRUSTED_ISSUER,
+    )
   }
 
   companion object {
@@ -274,7 +356,7 @@ class DuchyClientTest {
     private val AGGREGATOR_SIGNING_ALGORITHM =
       SignatureAlgorithm.fromKeyAndHashAlgorithm(
         AGGREGATOR_SIGNING_KEY.certificate.publicKey,
-        HashAlgorithm.SHA256
+        HashAlgorithm.SHA256,
       )!!
 
     private val DUCHY_SIGNING_KEY =
@@ -282,8 +364,18 @@ class DuchyClientTest {
     private val DUCHY_SIGNING_ALGORITHM =
       SignatureAlgorithm.fromKeyAndHashAlgorithm(
         DUCHY_SIGNING_KEY.certificate.publicKey,
-        HashAlgorithm.SHA256
+        HashAlgorithm.SHA256,
       )!!
     private val DUCHY_TRUSTED_ISSUER = readCertificate(DUCHY_1_NON_AGG_ROOT_CERT_PEM_FILE)
+
+    private val EDP_SIGNING_KEY = readSigningKeyHandle(EDP_1_CERT_PEM_FILE, EDP_1_KEY_FILE)
+    private val EDP_SIGNING_ALGORITHM =
+      SignatureAlgorithm.fromKeyAndHashAlgorithm(
+        EDP_SIGNING_KEY.certificate.publicKey,
+        HashAlgorithm.SHA256,
+      )!!
+    private val EDP_TRUSTED_ISSUER = readCertificate(EDP_1_ROOT_CERT_PEM_FILE)
+    private val EDP_PRIVATE_KEY = TinkPrivateKeyHandle.generateEcies()
+    private val EDP_PUBLIC_KEY = EDP_PRIVATE_KEY.publicKey.toEncryptionPublicKey()
   }
 }

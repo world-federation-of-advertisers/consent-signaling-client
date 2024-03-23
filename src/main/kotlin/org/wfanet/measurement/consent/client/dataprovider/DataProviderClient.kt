@@ -23,6 +23,7 @@ import org.wfanet.measurement.api.v2alpha.EncryptionPublicKey
 import org.wfanet.measurement.api.v2alpha.EventGroup.Metadata
 import org.wfanet.measurement.api.v2alpha.Measurement
 import org.wfanet.measurement.api.v2alpha.MeasurementSpec
+import org.wfanet.measurement.api.v2alpha.RandomSeed
 import org.wfanet.measurement.api.v2alpha.Requisition
 import org.wfanet.measurement.api.v2alpha.RequisitionSpec
 import org.wfanet.measurement.api.v2alpha.SignedMessage
@@ -63,7 +64,7 @@ fun computeRequisitionFingerprint(requisition: Requisition): ByteString {
 fun verifyMeasurementSpec(
   signedMeasurementSpec: SignedMessage,
   measurementConsumerCertificate: X509Certificate,
-  trustedIssuer: X509Certificate
+  trustedIssuer: X509Certificate,
 ) {
   measurementConsumerCertificate.run {
     validate(trustedIssuer)
@@ -80,7 +81,7 @@ fun verifyMeasurementSpec(
  */
 fun decryptRequisitionSpec(
   encryptedSignedMessageRequisitionSpec: EncryptedMessage,
-  dataProviderPrivateKey: PrivateKeyHandle
+  dataProviderPrivateKey: PrivateKeyHandle,
 ): SignedMessage {
   return dataProviderPrivateKey.decryptMessage(encryptedSignedMessageRequisitionSpec)
 }
@@ -104,14 +105,14 @@ fun decryptRequisitionSpec(
   CertPathValidatorException::class,
   SignatureException::class,
   NonceMismatchException::class,
-  PublicKeyMismatchException::class
+  PublicKeyMismatchException::class,
 )
 fun verifyRequisitionSpec(
   signedRequisitionSpec: SignedMessage,
   requisitionSpec: RequisitionSpec,
   measurementSpec: MeasurementSpec,
   measurementConsumerCertificate: X509Certificate,
-  trustedIssuer: X509Certificate
+  trustedIssuer: X509Certificate,
 ) {
   measurementConsumerCertificate.validate(trustedIssuer)
   measurementConsumerCertificate.verifySignedMessage(signedRequisitionSpec)
@@ -136,7 +137,7 @@ fun verifyRequisitionSpec(
 fun verifyElGamalPublicKey(
   signedElGamalPublicKey: SignedMessage,
   duchyCertificate: X509Certificate,
-  trustedDuchyIssuer: X509Certificate
+  trustedDuchyIssuer: X509Certificate,
 ) {
   duchyCertificate.run {
     validate(trustedDuchyIssuer)
@@ -148,7 +149,7 @@ fun verifyElGamalPublicKey(
 fun signResult(
   result: Measurement.Result,
   dataProviderSigningKey: SigningKeyHandle,
-  algorithm: SignatureAlgorithm = dataProviderSigningKey.defaultAlgorithm
+  algorithm: SignatureAlgorithm = dataProviderSigningKey.defaultAlgorithm,
 ): SignedMessage {
   return result.serializeAndSign(dataProviderSigningKey, algorithm)
 }
@@ -156,10 +157,41 @@ fun signResult(
 /** Encrypts a [Metadata]. */
 fun encryptMetadata(
   metadata: Metadata,
-  measurementConsumerPublicKey: EncryptionPublicKey
+  measurementConsumerPublicKey: EncryptionPublicKey,
 ): EncryptedMessage =
   measurementConsumerPublicKey.toPublicKeyHandle().encryptMessage(metadata.pack())
 
 /** Encrypts [signedResult] using [measurementConsumerPublicKey]. */
 fun encryptResult(signedResult: SignedMessage, measurementConsumerPublicKey: EncryptionPublicKey) =
   measurementConsumerPublicKey.toPublicKeyHandle().encryptMessage(signedResult.pack())
+
+/** Signs [randomSeed] using [dataProviderSigningKey] and [algorithm]. */
+fun signRandomSeed(
+  randomSeed: RandomSeed,
+  dataProviderSigningKey: SigningKeyHandle,
+  algorithm: SignatureAlgorithm = dataProviderSigningKey.defaultAlgorithm,
+) = randomSeed.serializeAndSign(dataProviderSigningKey, algorithm)
+
+/** Encrypts a signed [RandomSeed]. */
+fun encryptRandomSeed(signedRandomSeed: SignedMessage, duchyPublicKey: EncryptionPublicKey) =
+  duchyPublicKey.toPublicKeyHandle().encryptMessage(signedRandomSeed.pack())
+
+/**
+ * Verifies the [signeEncryptionPublicKey] from a Duchy.
+ * 1. Validates the certificate path from [duchyCertificate] to [trustedDuchyIssuer]
+ * 2. Verifies the [signeEncryptionPublicKey] [signature][SignedMessage.getSignature]
+ * 3. TODO: Check for replay attacks for the signature
+ *
+ * @throws CertPathValidatorException if [duchyCertificate] is invalid
+ * @throws SignatureException if the signature is invalid
+ */
+fun verifyEncryptionPublicKey(
+  signeEncryptionPublicKey: SignedMessage,
+  duchyCertificate: X509Certificate,
+  trustedDuchyIssuer: X509Certificate,
+) {
+  duchyCertificate.run {
+    validate(trustedDuchyIssuer)
+    verifySignedMessage(signeEncryptionPublicKey)
+  }
+}
