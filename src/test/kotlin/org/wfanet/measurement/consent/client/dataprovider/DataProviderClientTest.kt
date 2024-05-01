@@ -183,6 +183,32 @@ class DataProviderClientTest {
   }
 
   @Test
+  fun `verifyRequisitionSpec does not throw when legacy RequisitionSpec is valid`() {
+    val requisitionSpec =
+      FAKE_REQUISITION_SPEC.copy {
+        @Suppress("DEPRECATION") // For legacy resources.
+        serializedMeasurementPublicKey = measurementPublicKey.value
+        clearMeasurementPublicKey()
+      }
+    val measurementSpec =
+      FAKE_MEASUREMENT_SPEC.copy {
+        @Suppress("DEPRECATION") // For legacy resources.
+        serializedMeasurementPublicKey = measurementPublicKey.value
+        clearMeasurementPublicKey()
+      }
+    val signedRequisitionSpec =
+      signRequisitionSpec(requisitionSpec, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
+
+    verifyRequisitionSpec(
+      signedRequisitionSpec,
+      requisitionSpec,
+      measurementSpec,
+      MC_SIGNING_KEY.certificate,
+      MC_TRUSTED_ISSUER,
+    )
+  }
+
+  @Test
   fun `verifyRequisitionSpec throws when nonce mismatches`() {
     val signedRequisitionSpec =
       signRequisitionSpec(FAKE_REQUISITION_SPEC, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
@@ -208,6 +234,35 @@ class DataProviderClientTest {
         measurementPublicKey =
           measurementPublicKey.copy { value = value.concat("garbage".toByteStringUtf8()) }
       }
+
+    assertFailsWith<PublicKeyMismatchException> {
+      verifyRequisitionSpec(
+        signedRequisitionSpec,
+        FAKE_REQUISITION_SPEC,
+        measurementSpec,
+        MC_SIGNING_KEY.certificate,
+        MC_TRUSTED_ISSUER,
+      )
+    }
+  }
+
+  @Test
+  fun `verifyRequisitionSpec throws when legacy public key mismatches`() {
+    val requisitionSpec =
+      FAKE_REQUISITION_SPEC.copy {
+        @Suppress("DEPRECATION") // For legacy resources.
+        serializedMeasurementPublicKey = measurementPublicKey.value
+        clearMeasurementPublicKey()
+      }
+    val measurementSpec =
+      FAKE_MEASUREMENT_SPEC.copy {
+        @Suppress("DEPRECATION") // For legacy resources.
+        serializedMeasurementPublicKey =
+          measurementPublicKey.value.concat("garbage".toByteStringUtf8())
+        clearMeasurementPublicKey()
+      }
+    val signedRequisitionSpec =
+      signRequisitionSpec(requisitionSpec, MC_SIGNING_KEY, MC_SIGNING_ALGORITHM)
 
     assertFailsWith<PublicKeyMismatchException> {
       verifyRequisitionSpec(

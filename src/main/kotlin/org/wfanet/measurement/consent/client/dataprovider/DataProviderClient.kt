@@ -116,9 +116,20 @@ fun verifyRequisitionSpec(
 ) {
   measurementConsumerCertificate.validate(trustedIssuer)
   measurementConsumerCertificate.verifySignedMessage(signedRequisitionSpec)
-  if (requisitionSpec.measurementPublicKey != measurementSpec.measurementPublicKey) {
-    throw PublicKeyMismatchException("Measurement public key mismatch")
+  if (requisitionSpec.hasMeasurementPublicKey()) {
+    if (requisitionSpec.measurementPublicKey != measurementSpec.measurementPublicKey) {
+      throw PublicKeyMismatchException("Measurement public key mismatch")
+    }
+  } else {
+    @Suppress("DEPRECATION") // For legacy resources.
+    if (
+      requisitionSpec.serializedMeasurementPublicKey !=
+        measurementSpec.serializedMeasurementPublicKey
+    ) {
+      throw PublicKeyMismatchException("Measurement public key mismatch")
+    }
   }
+
   if (!measurementSpec.nonceHashesList.contains(Hashing.hashSha256(requisitionSpec.nonce))) {
     throw NonceMismatchException("Nonce hash mismatch")
   }
